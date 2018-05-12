@@ -69,7 +69,16 @@ void  AS1_OnError(void)
 */
 void  AS1_OnRxChar(void)
 {
-  /* Write your code here ... */
+	 if (found_band == 0){
+				 CodError =  AS1_RecvChar( & anuncio ) ;
+				 
+				 if (( anuncio & 0xf0) == (int)'s' ) {
+					 paquete = 's';
+				 }
+			 }
+			 
+			
+
 }
 
 /*
@@ -157,75 +166,7 @@ void  AS2_OnError(void)
 **     Parameters  : None
 **     Returns     : Nothing
 ** ===================================================================
-*/
-void  AS2_OnRxChar(void) // identificacion de paquetes
-{
-	 if (found_band == 0){
-			 CodError =  AS2_RecvChar( & anuncio ) ;
-			 
-			 if (( anuncio & 0xf0) == (int)'s' ) {
-				 paquete = 's';
-			 }
-		 }
-		 
-		 else if (found_band == 1){
-			 CodError =  AS2_RecvChar( & anuncio2 ) ;
-			 if (anuncio2 == 0){
-				 found_band = found_band+1 ; // es un commando y se lee el siguiente byte
-			 }
-			 else{
-				 found_band = 0 ; // No es un commando
-			 }
-			
-		 }
-		 else if (found_band == 2){
-			 CodError =  AS2_RecvChar( & command ) ;
-			 if (command == 2){
-				 n_canales = anuncio & 0x0f ; // Numero de canales a leer
-				 found_band = found_band+1; // es un commando y se lee el siguiente byte
-			 }
-			 else if (command == 1){
-				 n_canales = anuncio & 0x0f ; // Numero de canales a leer
-				 found_band = found_band+1 ; // es un commando y se lee el siguiente byte
-			 }
-			 else if (command == 3){
-			     estado = MOTOR;
-			     found_band = 0;
-			     command = 0;
-			     anuncio = 0;
-			     anuncio2 = 0;
-			 }
-			 else{
-				 found_band = 0; // No es un commando
-				 command = 0;
-				 anuncio = 0;
-				 anuncio2 = 0;
-			 }
-			 	
-		  }
-		 else {
-			 if (found_band == (n_canales+n_canales+2)){ // Se lee hasta que se alcance el numero de bytes de trama
-				 found_band = 0; // Se termino la lectura del Bloque
-				 if (command == 2){
-					 estado = POINTCLOUD_START;
-				 }
-				 else if (command == 1){
-					 estado = FREERUN;
-					
-				 }
-				 command = 0;
-				 anuncio = 0;
-				 anuncio2 = 0;
-				 n_canales = 0;
-				 
-			 }
-			 else {found_band = found_band+1;} // se lee el siguiente byte
-			 
-		 }
 
-}
-
-/*
 ** ===================================================================
 **     Event       :  AS2_OnTxChar (module Events)
 **
@@ -272,6 +213,59 @@ void  AS2_OnFullRxBuf(void)
 ** ===================================================================
 */
 void  AS2_OnFreeTxBuf(void)
+{
+  /* Write your code here ... */
+}
+
+/*
+** ===================================================================
+**     Event       :  AS2_OnRxChar (module Events)
+**
+**     Component   :  AS2 [AsynchroSerial]
+**     Description :
+**         This event is called after a correct character is received.
+**         The event is available only when the <Interrupt
+**         service/event> property is enabled and either the <Receiver>
+**         property is enabled or the <SCI output mode> property (if
+**         supported) is set to Single-wire mode.
+**     Parameters  : None
+**     Returns     : Nothing
+** ===================================================================
+*/
+
+/*
+** ===================================================================
+**     Event       :  AS2_OnRxChar (module Events)
+**
+**     Component   :  AS2 [AsynchroSerial]
+**     Description :
+**         This event is called after a correct character is received.
+**         The event is available only when the <Interrupt
+**         service/event> property is enabled and either the <Receiver>
+**         property is enabled or the <SCI output mode> property (if
+**         supported) is set to Single-wire mode.
+**     Parameters  : None
+**     Returns     : Nothing
+** ===================================================================
+*/
+
+
+/*
+** ===================================================================
+**     Event       :  AS2_OnRxChar (module Events)
+**
+**     Component   :  AS2 [AsynchroSerial]
+**     Description :
+**         This event is called after a correct character is received.
+**         The event is available only when the <Interrupt
+**         service/event> property is enabled and either the <Receiver>
+**         property is enabled or the <SCI output mode> property (if
+**         supported) is set to Single-wire mode.
+**     Parameters  : None
+**     Returns     : Nothing
+** ===================================================================
+*/
+void  AS2_OnRxChar(void)
 {
   /* Write your code here ... */
 }

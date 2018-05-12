@@ -32,18 +32,27 @@
 #include "Events.h"
 #include "AS1.h"
 #include "AS2.h"
+#include "Bit1.h"
+#include "FC161.h"
 /* Include shared modules, which are used for whole project */
 #include "PE_Types.h"
 #include "PE_Error.h"
 #include "PE_Const.h"
 #include "IO_Map.h"
-
-/* User includes (#include below this line is not maintained by Processor Expert) */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+// Variables
+// Estado
+unsigned char estado = ESPERAR ;
 // Variables COMM
-unsigned char estado;
 unsigned char CodError;
-unsigned int Enviados = 13;		// Esta variable no aporta nada más sino el número de elementos del arreglo a enviar.
-unsigned int error;
+unsigned short Enviados = 13;		// Esta variable no aporta nada más sino el número de elementos del arreglo a enviar.
+unsigned short error;
+unsigned char Buffer[4] = {0x00, 0x00, 0x00, 0x00};
+unsigned short Lectura_Buffer= 2;
+unsigned short Velup, Vellow;
 bool primero = FALSE;
 unsigned char anuncio;
 unsigned char anuncio2;
@@ -53,24 +62,118 @@ unsigned char command; // Comando enviado desde pc para cambiar estado del siste
 char paquete;
 
 
-void main(void)
-{
+// Variables COMM CMUcam1
+		// Decodificacion de paquetes
+
+int Data[20] = {};
+int i;
+
+	// Deteccion de camara
+char packet_type = ' ';
+int x1, y1, x2, y2; // rectangulo detectado
+int pixeles, confidence; // Calidad de la deteccion
+
+
+void decode( int *Buffer);
+void clean_buffer(int* Buffer, int length);
+int string_is_number(char *str);
+void delay_ms (unsigned int time_delay  );
+
+void main(void){
   /* Write your local variable definition here */
 
   /*** Processor Expert internal initialization. DON'T REMOVE THIS CODE!!! ***/
   PE_low_level_init();
+  
   /*** End of Processor Expert internal initialization.                    ***/
 
   /* Write your code here */
-  /* For example: for(;;) { } */
+	 for(;;) {
+		 switch (estado){
+				
+				case ESPERAR:
+					if (paquete  == 's'){
+						estado = MOTORES;
+						paquete =' ';
+					}
+					break;
+					
+				case MOTORES:
+					Bit1_NegVal();
+						estado = ESPERAR;
+					break;
+				
+				default:
+					break;
+		 }
+	 }
 
-  /*** Don't write any code pass this line, or it will be deleted during code generation. ***/
+
   /*** Processor Expert end of main routine. DON'T MODIFY THIS CODE!!! ***/
-  for(;;){}
+	 for(;;) {}
   /*** Processor Expert end of main routine. DON'T WRITE CODE BELOW!!! ***/
 } /*** End of main routine. DO NOT MODIFY THIS TEXT!!! ***/
 
-/* END main */
+/* Implementacion de funciones */
+void decode( int *Buffer){
+  // Reconstruir string
+	int i,j;
+	char str[20];
+	char * pch;
+	i = 0;
+	while (Buffer[i] != 0){
+		str[i] =(char) Buffer[i];
+		printf("%c, Codigo ascii:%d\n", str[i], Buffer[i]);
+		i++;
+	}
+	//str[i]='\r';
+   printf("String Reconstruida:\n%s\n", str);
+  // Extraccion de numeros   
+	pch = strtok (str," ");
+	i = 0;
+	j = 0;
+	while (pch != NULL)
+	    {	
+	    	//printf("%s\n", pch);
+	    	if(string_is_number(pch)){
+	    		Data[j] = atoi(pch);
+	    		j++;
+	    	}
+	    	
+	    	pch = strtok (NULL, " ");
+	    	i++;
+	  	}
+	  	
+}
+
+void clean_buffer(int* Buffer, int length){
+	int i;
+	for (i = 0; i < length; i++){
+		Buffer[i] = 0;
+	}
+}
+int string_is_number(char *str){ // Verifica si todos los elementos  del string son numeros
+	int i;
+	int length = (int) strlen(str);
+	for (i = 0; i < length; i++){
+		if (!isdigit(str[i])) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+void delay_ms (unsigned int time_delay){
+	
+	unsigned short time;
+	CodError = FC161_Reset(); // Resetear contador
+	CodError = FC161_GetTimeMS(&time);
+	while(time_delay> time){
+		CodError = FC161_GetTimeMS(&time);
+	}
+	
+	
+}
 /*!
 ** @}
 */

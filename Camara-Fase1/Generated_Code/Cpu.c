@@ -7,7 +7,7 @@
 **     Version     : Component 01.014, Driver 01.12, CPU db: 3.00.078
 **     Datasheet   : MCF51QE128RM, Rev. 3, 9/2007
 **     Compiler    : CodeWarrior ColdFireV1 C Compiler
-**     Date/Time   : 2018-05-10, 03:01, # CodeGen: 2
+**     Date/Time   : 2018-05-11, 17:23, # CodeGen: 9
 **     Abstract    :
 **         This component "MCF51QE128_80" contains initialization of the
 **         CPU and provides basic methods and events for CPU core
@@ -65,16 +65,22 @@
 /* MODULE Cpu. */
 #include "AS1.h"
 #include "AS2.h"
+#include "Bit1.h"
+#include "FC161.h"
 #include "PE_Types.h"
 #include "PE_Error.h"
 #include "PE_Const.h"
 #include "IO_Map.h"
+#include "PE_Timer.h"
 #include "Events.h"
 #include "Cpu.h"
 
 /* Global variables */
 volatile far word SR_reg;              /* Current CCR register */
 volatile byte SR_lock;
+
+/*Definition of global shadow variables*/
+byte Shadow_PTC;
 
 
 /*
@@ -209,10 +215,12 @@ void PE_low_level_init(void)
   clrSetReg8Bits(PTBDD, 0x01U, 0x02U);  
   /* PTBD: PTBD1=1 */
   setReg8Bits(PTBD, 0x02U);             
-  /* PTCDD: PTCDD7=1,PTCDD6=0 */
-  clrSetReg8Bits(PTCDD, 0x40U, 0x80U);  
-  /* PTCD: PTCD7=1 */
-  setReg8Bits(PTCD, 0x80U);             
+  /* PTCD: PTCD7=1,PTCD0=0 */
+  clrSetReg8Bits(PTCD, 0x01U, 0x80U);   
+  /* PTCDD: PTCDD7=1,PTCDD6=0,PTCDD0=1 */
+  clrSetReg8Bits(PTCDD, 0x40U, 0x81U);  
+  /* PTCPE: PTCPE0=0 */
+  clrReg8Bits(PTCPE, 0x01U);            
   /* PTASE: PTASE7=0,PTASE6=0,PTASE4=0,PTASE3=0,PTASE2=0,PTASE1=0,PTASE0=0 */
   clrReg8Bits(PTASE, 0xDFU);            
   /* PTBSE: PTBSE7=0,PTBSE6=0,PTBSE5=0,PTBSE4=0,PTBSE3=0,PTBSE2=0,PTBSE1=0,PTBSE0=0 */
@@ -254,6 +262,10 @@ void PE_low_level_init(void)
   AS1_Init();
   /* ### Asynchro serial "AS2" init code ... */
   AS2_Init();
+  /* ### BitIO "Bit1" init code ... */
+  Shadow_PTC &= 0xFEU;                 /* Initialize pin shadow variable bit */
+  /* ### Free running 8-bit counter "FC161" init code ... */
+  FC161_Init();
   /* INTC_WCR: ENB=0,??=0,??=0,??=0,??=0,MASK=0 */
   setReg8(INTC_WCR, 0x00U);             
   SR_lock = 0x00;

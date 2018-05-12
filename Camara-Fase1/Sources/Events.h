@@ -34,12 +34,15 @@
 #include "PE_Error.h"
 #include "PE_Const.h"
 #include "IO_Map.h"
+#include "PE_Timer.h"
 #include "AS1.h"
 #include "AS2.h"
+#include "Bit1.h"
+#include "FC161.h"
 
 
 #define ESPERAR  2
-#define MEDIR  3
+#define MOTORES  3
 #define ENVIAR 4
 #define MOTOR 5
 #define FREERUN 6
@@ -48,19 +51,7 @@
 #define RESET 9
 
 
-typedef enum {
-  ECHO_IDLE, /* device not used */
-  ECHO_TRIGGERED, /* started trigger pulse */
-  ECHO_MEDIR, /* measuring echo pulse */
-  ECHO_OVERFLOW, /* measurement took too long */
-  ECHO_TERMINADO /* measurement finished */
-} US_EchoState;
 
-typedef enum {
-  TRIGGER_BAJO, /* started trigger pulse */
-  TRIGGER_ALTO, /* measuring echo pulse */
-  TRIGGER_TERMINADO /* measurement finished */
-} US_TrigerState;
 
 extern unsigned char estado;
 extern unsigned int medicion;
@@ -70,6 +61,7 @@ extern unsigned char found_band;
 extern unsigned char n_canales;
 extern unsigned char command;
 extern unsigned char CodError;
+extern char paquete;
 
 void AS1_OnError(void);
 /*

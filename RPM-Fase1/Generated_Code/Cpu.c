@@ -7,7 +7,7 @@
 **     Version     : Component 01.014, Driver 01.12, CPU db: 3.00.078
 **     Datasheet   : MCF51QE128RM, Rev. 3, 9/2007
 **     Compiler    : CodeWarrior ColdFireV1 C Compiler
-**     Date/Time   : 2018-05-10, 02:23, # CodeGen: 1
+**     Date/Time   : 2018-05-12, 04:03, # CodeGen: 12
 **     Abstract    :
 **         This component "MCF51QE128_80" contains initialization of the
 **         CPU and provides basic methods and events for CPU core
@@ -63,11 +63,19 @@
 */         
 
 /* MODULE Cpu. */
+#include "PWM1.h"
+#include "PWM2.h"
+#include "Bit1.h"
+#include "Bit2.h"
+#include "AD1.h"
+#include "FC161.h"
 #include "AS1.h"
+#include "Bit3.h"
 #include "PE_Types.h"
 #include "PE_Error.h"
 #include "PE_Const.h"
 #include "IO_Map.h"
+#include "PE_Timer.h"
 #include "Events.h"
 #include "Cpu.h"
 
@@ -171,13 +179,13 @@ void __initialize_hardware(void)
   /*lint -restore Enable MISRA rule (11.3) checking. */
   /* ICSC1: CLKS=0,RDIV=0,IREFS=1,IRCLKEN=1,IREFSTEN=0 */
   setReg8(ICSC1, 0x06U);               /* Initialization of the ICS control register 1 */ 
-  /* ICSC2: BDIV=0,RANGE=0,HGO=0,LP=0,EREFS=0,ERCLKEN=0,EREFSTEN=0 */
-  setReg8(ICSC2, 0x00U);               /* Initialization of the ICS control register 2 */ 
+  /* ICSC2: BDIV=1,RANGE=0,HGO=0,LP=0,EREFS=0,ERCLKEN=0,EREFSTEN=0 */
+  setReg8(ICSC2, 0x40U);               /* Initialization of the ICS control register 2 */ 
   while(ICSSC_IREFST == 0U) {          /* Wait until the source of reference clock is internal clock */
   }
-  /* ICSSC: DRST_DRS=1,DMX32=0 */
-  clrSetReg8Bits(ICSSC, 0xA0U, 0x40U); /* Initialization of the ICS status and control */ 
-  while((ICSSC & 0xC0U) != 0x40U) {    /* Wait until the FLL switches to Mid range DCO mode */
+  /* ICSSC: DRST_DRS=0,DMX32=0 */
+  clrReg8Bits(ICSSC, 0xE0U);           /* Initialization of the ICS status and control */ 
+  while((ICSSC & 0xC0U) != 0x00U) {    /* Wait until the FLL switches to Low range DCO mode */
   }
 
   /*** End of PE initialization code after reset ***/
@@ -204,10 +212,24 @@ void PE_low_level_init(void)
   /* SCGC2: ??=1,FLS=1,IRQ=1,KBI=1,ACMP=1,RTC=1,SPI2=1,SPI1=1 */
   setReg8(SCGC2, 0xFFU);                
   /* Common initialization of the CPU registers */
-  /* PTBDD: PTBDD1=1,PTBDD0=0 */
-  clrSetReg8Bits(PTBDD, 0x01U, 0x02U);  
-  /* PTBD: PTBD1=1 */
-  setReg8Bits(PTBD, 0x02U);             
+  /* PTCDD: PTCDD1=1,PTCDD0=1 */
+  setReg8Bits(PTCDD, 0x03U);            
+  /* PTCD: PTCD1=1,PTCD0=1 */
+  setReg8Bits(PTCD, 0x03U);             
+  /* PTBD: PTBD4=0,PTBD3=0,PTBD1=1 */
+  clrSetReg8Bits(PTBD, 0x18U, 0x02U);   
+  /* PTBPE: PTBPE4=0,PTBPE3=0 */
+  clrReg8Bits(PTBPE, 0x18U);            
+  /* PTBDD: PTBDD4=1,PTBDD3=1,PTBDD1=1,PTBDD0=0 */
+  clrSetReg8Bits(PTBDD, 0x01U, 0x1AU);  
+  /* APCTL1: ADPC0=1 */
+  setReg8Bits(APCTL1, 0x01U);           
+  /* PTED: PTED7=0 */
+  clrReg8Bits(PTED, 0x80U);             
+  /* PTEPE: PTEPE7=0 */
+  clrReg8Bits(PTEPE, 0x80U);            
+  /* PTEDD: PTEDD7=1 */
+  setReg8Bits(PTEDD, 0x80U);            
   /* PTASE: PTASE7=0,PTASE6=0,PTASE4=0,PTASE3=0,PTASE2=0,PTASE1=0,PTASE0=0 */
   clrReg8Bits(PTASE, 0xDFU);            
   /* PTBSE: PTBSE7=0,PTBSE6=0,PTBSE5=0,PTBSE4=0,PTBSE3=0,PTBSE2=0,PTBSE1=0,PTBSE0=0 */
@@ -245,8 +267,22 @@ void PE_low_level_init(void)
   /* PTJDS: PTJDS7=1,PTJDS6=1,PTJDS5=1,PTJDS4=1,PTJDS3=1,PTJDS2=1,PTJDS1=1,PTJDS0=1 */
   setReg8(PTJDS, 0xFFU);                
   /* ### Shared modules init code ... */
+  /* ### Programable pulse generation "PWM1" init code ... */
+  PWM1_Init();
+  /* ### Programable pulse generation "PWM2" init code ... */
+  PWM2_Init();
+  /* ### BitIO "Bit1" init code ... */
+  /* ### BitIO "Bit2" init code ... */
+  /* ###  "AD1" init code ... */
+  AD1_Init();
+  /* ### Free running 8-bit counter "FC161" init code ... */
+  FC161_Init();
   /* ### Asynchro serial "AS1" init code ... */
   AS1_Init();
+  /* ### BitIO "Bit3" init code ... */
+  /* Common peripheral initialization - ENABLE */
+  /* TPM3SC: CLKSB=0,CLKSA=1,PS2=1,PS1=1 */
+  clrSetReg8Bits(TPM3SC, 0x10U, 0x0EU); 
   /* INTC_WCR: ENB=0,??=0,??=0,??=0,??=0,MASK=0 */
   setReg8(INTC_WCR, 0x00U);             
   SR_lock = 0x00;

@@ -1,6 +1,8 @@
 #include <stdio.h>
 
-
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
 void decode( int *Buffer);
 void clean_buffer(int* Buffer, int length);
@@ -14,7 +16,7 @@ int string_is_number(char *str);
    	
 		// Deteccion de camara
    	char packet_type = ' ';
-   	int x1, y1, x2, y2; // rectangulo detectado
+   //	int x1, y1, x2, y2; // rectangulo detectado
    	int pixeles, confidence; // Calidad de la deteccion
 
 
@@ -50,7 +52,7 @@ void decode( int *Buffer){
 	char * pch;
 	i = 0;
 	while (Buffer[i] != 0){
-		str[i] = Buffer[i];
+		str[i] = (char)Buffer[i];
 		printf("%c, Codigo ascii:%d\n", str[i], Buffer[i]);
 		i++;
 	}
@@ -62,7 +64,7 @@ void decode( int *Buffer){
 	j = 0;
 	while (pch != NULL)
 	    {	
-	    	printf("%s\n", pch);
+	    	//printf("%s\n", pch);
 	    	if(string_is_number(pch)){
 	    		Data[j] = atoi(pch);
 	    		j++;
@@ -82,7 +84,7 @@ void clean_buffer(int* Buffer, int length){
 }
 int string_is_number(char *str){ // Verifica si todos los elementos  del string son numeros
 	int i;
-	int length = strlen(str);
+	int length = (int) strlen(str);
 	for (i = 0; i < length; i++){
 		if (!isdigit(str[i])) {
 			return 0;

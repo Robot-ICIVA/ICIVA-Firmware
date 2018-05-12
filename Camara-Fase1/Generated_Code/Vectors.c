@@ -5,7 +5,7 @@
 **     Processor   : MCF51QE128CLK
 **     Version     : Component 01.014, Driver 01.12, CPU db: 3.00.078
 **     Compiler    : CodeWarrior ColdFireV1 C Compiler
-**     Date/Time   : 2018-05-10, 03:01, # CodeGen: 2
+**     Date/Time   : 2018-05-11, 17:23, # CodeGen: 9
 **     Abstract    :
 **         This component "MCF51QE128_80" contains initialization of the
 **         CPU and provides basic methods and events for CPU core
@@ -59,6 +59,8 @@
 #include "Cpu.h"
 #include "AS1.h"
 #include "AS2.h"
+#include "Bit1.h"
+#include "FC161.h"
 #include "startcf.h"
 
 extern unsigned long far _SP_INIT[];
@@ -154,7 +156,7 @@ const tIsrFunc _InterruptVectorTable[103] @0x00000000 = { /* Interrupt vector ta
   AS2_InterruptError,                  /* 0x53  0x0000014C   2   5   ivVsci2err    used by PE */
   AS2_InterruptRx,                     /* 0x54  0x00000150   2   4   ivVsci2rx     used by PE */
   AS2_InterruptTx,                     /* 0x55  0x00000154   2   3   ivVsci2tx     used by PE */
-  Cpu_Interrupt,                       /* 0x56  0x00000158   -   -   ivVrtc        unused by PE */
+  FC161_Interrupt,                     /* 0x56  0x00000158   2   2   ivVrtc        used by PE */
   Cpu_Interrupt,                       /* 0x57  0x0000015C   -   -   ivVtpm3ch0    unused by PE */
   Cpu_Interrupt,                       /* 0x58  0x00000160   -   -   ivVtpm3ch1    unused by PE */
   Cpu_Interrupt,                       /* 0x59  0x00000164   -   -   ivVtpm3ch2    unused by PE */

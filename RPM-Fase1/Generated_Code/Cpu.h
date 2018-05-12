@@ -7,7 +7,7 @@
 **     Version     : Component 01.014, Driver 01.12, CPU db: 3.00.078
 **     Datasheet   : MCF51QE128RM, Rev. 3, 9/2007
 **     Compiler    : CodeWarrior ColdFireV1 C Compiler
-**     Date/Time   : 2018-05-10, 02:23, # CodeGen: 1
+**     Date/Time   : 2018-05-11, 17:44, # CodeGen: 4
 **     Abstract    :
 **         This component "MCF51QE128_80" contains initialization of the
 **         CPU and provides basic methods and events for CPU core
@@ -77,12 +77,13 @@
 #include "PE_Error.h"
 #include "PE_Const.h"
 #include "IO_Map.h"
+#include "PE_Timer.h"
 
 
 
-#define CPU_BUS_CLK_HZ              0x01000000UL /* Initial value of the bus clock frequency in Hz */
+#define CPU_BUS_CLK_HZ              0x00400000UL /* Initial value of the bus clock frequency in Hz */
 
-#define CPU_INSTR_CLK_HZ            0x01000000UL /* Initial value of the instruction clock frequency in Hz */
+#define CPU_INSTR_CLK_HZ            0x00400000UL /* Initial value of the instruction clock frequency in Hz */
 
 #define CPU_INT_CLK_HZ              0x8000UL /* Value of the internal oscillator clock frequency in Hz */
 
