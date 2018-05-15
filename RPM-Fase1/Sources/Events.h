@@ -43,6 +43,8 @@
 #include "FC161.h"
 #include "AS1.h"
 #include "Bit3.h"
+#include "Bit4.h"
+#include "Bit5.h"
 #include "PWM1.h"
 
 #define ESPERAR  2

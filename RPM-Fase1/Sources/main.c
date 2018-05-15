@@ -38,6 +38,8 @@
 #include "FC161.h"
 #include "AS1.h"
 #include "Bit3.h"
+#include "Bit4.h"
+#include "Bit5.h"
 #include "PWM1.h"
 /* Include shared modules, which are used for whole project */
 #include "PE_Types.h"
@@ -68,12 +70,13 @@ unsigned char command; // Comando enviado desde pc para cambiar estado del siste
 unsigned int error;
 unsigned short Velup,Vellow;
 unsigned short Vel;
-unsigned short Lectura_Buffer=2;
-unsigned char Buffer[4];
+unsigned short Motor, Dir;
+unsigned short Lectura_Buffer=4;
+unsigned char Buffer[8];
 
 
 void delay_ms (unsigned int time_delay);
-void Motor(int Direccion, unsigned short Velocidad, int Derecha, int Izquierda, short Mantener);
+void Motores( unsigned short Motor, unsigned short Direccion, unsigned short Velocidad);
 
 void main(void){
   /* Write your local variable definition here */
@@ -92,12 +95,17 @@ void main(void){
 					
 				case MOTORES:
 					
-					Lectura_Buffer = 2;
-					CodError = AS1_RecvBlock(Buffer, 2, &Lectura_Buffer);
-					Velup =  (unsigned short)Buffer[0];
-					Vellow =  (unsigned short)Buffer[1];
+					Lectura_Buffer = 4;
+					CodError = AS1_RecvBlock(Buffer, 4, &Lectura_Buffer);
+					Motor = (unsigned short)Buffer[0];
+					Dir = (unsigned short)Buffer[1];
+					Velup =  (unsigned short)Buffer[2];
+					Vellow =  (unsigned short)Buffer[3];
 					Vel = (Velup<<8)+Vellow;
-					PWM1_SetRatio16(Vel);
+					PWM1_SetRatio16(5000);
+					PWM2_SetRatio16(Vel);
+					AS1_ClearRxBuf();
+					//Motores(Motor, Dir, Vel);
 					Bit3_NegVal();
 					estado = ESPERAR;
 					break;
@@ -113,82 +121,32 @@ void main(void){
   /*** Processor Expert end of main routine. DON'T WRITE CODE BELOW!!! ***/
 } /*** End of main routine. DO NOT MODIFY THIS TEXT!!! ***/
 
-void Motor(int Direccion, unsigned short Velocidad, int Derecha, int Izquierda, short Mantener){
-	unsigned short PrimVelocidad;
-	unsigned short PostVelocidad;
-	
-	if(Mantener==0){
-		
+void Motores( unsigned short Motor, unsigned short Direccion, unsigned short Velocidad){
+	if (Motor == 1) {
 		if(Direccion==1){								//Direccion 1 esta asociada a forward
-			
-			PrimVelocidad=Velocidad*6;					//Velocidad = 0-10 (parar-Maxima) (0% - 60%)
-			//PrimVelocidad=Velocidad*10;					//Velocidad = 0-10 (parar-Maxima) (0% - 100%)
-			PostVelocidad=(PrimVelocidad*65535)/100;	//Porcentaje de DutyCycle traducido
-			Bit1_PutVal(FALSE);							//Referente a Forward
-			Bit2_PutVal(FALSE);							//Referente a Forward
-			
-			if(PostVelocidad<39322 && PostVelocidad>0){
-				
-				if(Derecha==0 && Izquierda==0){			//No hay cruce a izquierda o derecha
-					PWM1_SetRatio16(PostVelocidad); 	//Aplica misma velocidad rueda 1
-					PWM2_SetRatio16(PostVelocidad);		//Aplica misma velocidad rueda 2				
-				}
-				
-				else if((Derecha>0 && Derecha<=90) && (Izquierda>0 && Izquierda<=90)){
-					
-				}
-				else{/*printf("Error");*/}
-				
-			}
-			else if(PostVelocidad>39322 || PostVelocidad<0){
-				//printf("Error");
-			}
-			else{
-				PWM1_SetRatio16(PostVelocidad); 	//PrimVel=0 por lo tanto 0% DutyCycle
-				PWM2_SetRatio16(PostVelocidad);		//Esto implica siempre en Low (Motor1 y 2 Stop)
-			}
-				
-			//printf("esto vale postvelocidad %d", PostVelocidad);
+			PWM2_SetRatio16(Velocidad);
+			Bit2_PutVal(FALSE);	
 		}
-		else if(Direccion==0){							//Direccion 0 esta asociada a backwards
-			
-			PrimVelocidad= 100 - Velocidad*6;			//El area efectiva es la inversa, se toma el negado del %
-			PostVelocidad=(PrimVelocidad*65535)/100;	//Porcentaje de DutyCycle (100%-40%)
-			Bit1_PutVal(TRUE);							//Referente a Forward
-			Bit2_PutVal(TRUE);							//Referente a Forward
-					
-			if(PostVelocidad>39322 && PostVelocidad<65535){
-						
-				if(Derecha==0 && Izquierda==0){			//No hay cruce a izquierda o derecha
-					PWM1_SetRatio16(PostVelocidad); 	//Aplica misma velocidad rueda 1
-					PWM2_SetRatio16(PostVelocidad);		//Aplica misma velocidad rueda 2				
-				}
-						
-				else if((Derecha>0 && Derecha<=90) && (Izquierda>0 && Izquierda<=90)){
-							
-				}
-				else{/*printf("Error");*/}
-						
-			}
-			else if(PostVelocidad>65536 || PostVelocidad<39322){
-				//printf("Error");
-			}
-			else if(PostVelocidad==65535){
-				PWM1_SetRatio16(PostVelocidad); 	//PrimVel=100 por lo tanto 100% DutyCycle
-				PWM2_SetRatio16(PostVelocidad);		//Esto implica siempre en High (Motor1 y 2 Stop)
-			}
-			else{/*printf("Error");*/}
-						
-			//printf("esto vale postvelocidad%d", PostVelocidad);
-		}
-		
-		else{
-			//printf("\nError\n");
-		}
+		else {							//Direccion 0 esta asociada a backwards
+		    Velocidad=65535-Velocidad;				//Inverso del DutyCycle
+			PWM2_SetRatio16(Velocidad);
+			Bit2_PutVal(TRUE);
+	     }
 	}
 	
-	else{//Se mantiene la velocidad
+	else {
+		if(Direccion==1){								//Direccion 1 esta asociada a forward
+			PWM1_SetRatio16(Velocidad);
+			Bit1_PutVal(FALSE);	
+		}
+		else {						//Direccion 0 esta asociada a backwards
+			Velocidad=65535-Velocidad;				//Inverso del DutyCycle
+			PWM1_SetRatio16(Velocidad);
+			Bit1_PutVal(TRUE);
+		 }
+
 	}
+
 	
 }
 
