@@ -6,7 +6,7 @@
 **     Component   : PWM
 **     Version     : Component 02.241, Driver 01.28, CPU db: 3.00.078
 **     Compiler    : CodeWarrior ColdFireV1 C Compiler
-**     Date/Time   : 2018-05-15, 09:46, # CodeGen: 4
+**     Date/Time   : 2018-05-15, 13:15, # CodeGen: 5
 **     Abstract    :
 **         This component implements a pulse-width modulation generator
 **         that generates signal with variable duty and fixed cycle. 
@@ -39,14 +39,13 @@
 **              Timer                  : Enabled
 **              Event                  : Enabled
 **         High speed mode
-**             Prescaler               : divide-by-64
-**             Clock                   : 65536 Hz
+**             Prescaler               : divide-by-1
+**             Clock                   : 4194304 Hz
 **           Initial value of            period     pulse width
-**             Xtal ticks              : 32768      0
-**             microseconds            : 1000000    0
-**             milliseconds            : 1000       0
-**             seconds                 : 1          0
-**             seconds (real)          : 1.0        0.0
+**             Xtal ticks              : 33         0
+**             microseconds            : 1000       0
+**             milliseconds            : 1          0
+**             seconds (real)          : 0.000999927521 0.0
 **
 **     Contents    :
 **         Enable     - byte PWM1_Enable(void);
@@ -110,8 +109,8 @@
 #include "PE_Timer.h"
 #include "Cpu.h"
 
-#define PWM1_PERIOD_VALUE              0xFFFFU /* Initial period value in ticks of the timer in high speed mode */
-#define PWM1_PERIOD_VALUE_HIGH         0xFFFFU /* Period value in ticks of the timer in high speed mode */
+#define PWM1_PERIOD_VALUE              0x1061U /* Initial period value in ticks of the timer in high speed mode */
+#define PWM1_PERIOD_VALUE_HIGH         0x1061U /* Period value in ticks of the timer in high speed mode */
 
 
 byte PWM1_Enable(void);
@@ -166,7 +165,7 @@ byte PWM1_SetDutyUS(word Time);
 **     Parameters  :
 **         NAME            - DESCRIPTION
 **         Time            - Duty to set [in microseconds]
-**                      (0 to 65535 us in high speed mode)
+**                      (0 to 1000 us in high speed mode)
 **     Returns     :
 **         ---             - Error code, possible codes:
 **                           ERR_OK - OK
@@ -188,7 +187,7 @@ byte PWM1_SetDutyMS(word Time);
 **     Parameters  :
 **         NAME            - DESCRIPTION
 **         Time            - Duty to set [in milliseconds]
-**                      (0 to 1000 ms in high speed mode)
+**                      (0 to 1 ms in high speed mode)
 **     Returns     :
 **         ---             - Error code, possible codes:
 **                           ERR_OK - OK

@@ -102,11 +102,7 @@ void main(void){
 					Velup =  (unsigned short)Buffer[2];
 					Vellow =  (unsigned short)Buffer[3];
 					Vel = (Velup<<8)+Vellow;
-					PWM1_SetRatio16(5000);
-					PWM2_SetRatio16(Vel);
-					AS1_ClearRxBuf();
-					//Motores(Motor, Dir, Vel);
-					Bit3_NegVal();
+					Motores(Motor, Dir, Vel);
 					estado = ESPERAR;
 					break;
 				
