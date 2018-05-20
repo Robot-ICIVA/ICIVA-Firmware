@@ -8,6 +8,7 @@
 **/Project_Settings
 **/Project_Headers
 **/Lib
+**/Generated_Code
 
 *.cproject
 *.project
