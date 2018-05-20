@@ -68,8 +68,8 @@ unsigned char command; // Comando enviado desde pc para cambiar estado del siste
 unsigned int error;
 unsigned short Velup,Vellow;
 unsigned short Vel;
-unsigned short Lectura_Buffer=2;
-unsigned char Buffer[4];
+unsigned short Lectura_Buffer=4;
+unsigned char Buffer[10];
 
 
 void delay_ms (unsigned int time_delay);
@@ -92,10 +92,12 @@ void main(void){
 					
 				case MOTORES:
 					
-					Lectura_Buffer = 2;
-					CodError = AS1_RecvBlock(Buffer, 2, &Lectura_Buffer);
-					Velup =  (unsigned short)Buffer[0];
-					Vellow =  (unsigned short)Buffer[1];
+					Lectura_Buffer = 4;
+					CodError = AS1_RecvBlock(Buffer, 4, &Lectura_Buffer);
+					Motor = (unsigned short)Buffer[0];
+					Dir = (unsigned short)Buffer[1];
+					Velup =  (unsigned short)Buffer[2];
+					Vellow =  (unsigned short)Buffer[3];
 					Vel = (Velup<<8)+Vellow;
 					PWM1_SetRatio16(Vel);
 					Bit3_NegVal();
