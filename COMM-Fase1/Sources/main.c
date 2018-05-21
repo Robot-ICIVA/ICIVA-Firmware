@@ -64,7 +64,7 @@ unsigned char anuncio2;
 unsigned char found_band;
 unsigned char n_bytes;
 unsigned char command; // Comando enviado desde pc para cambiar estado del sistema
-
+unsigned short Enviados = 4;	
 
 
 // Variables COMM
@@ -74,7 +74,7 @@ unsigned short Vel;
 unsigned short Motor, Dir;
 unsigned short Lectura_Buffer=4;
 unsigned char Buffer[40];
-
+unsigned char Trama_PC[4]={0xff, 0x02, 0x00, 0x00}; // Esta es una primera trama 
 
 void delay_ms (unsigned int time_delay);
 void Motores( unsigned short Motor, unsigned short Direccion, unsigned short Velocidad);
@@ -95,10 +95,8 @@ void main(void){
 					break;
 					
 				case MOTORES:
-					Bit4_NegVal();
 					Lectura_Buffer = n_bytes;
 					CodError = AS1_RecvBlock(Buffer, n_bytes, &Lectura_Buffer);
-					
 					Motor = (unsigned short)Buffer[0];
 					Dir = (unsigned short)Buffer[1];
 					Velup =  (unsigned short)Buffer[2];
@@ -111,12 +109,31 @@ void main(void){
 					break;
 					
 			    case CAMARA:
+			    	Bit4_NegVal();
 					Lectura_Buffer = n_bytes;
 					CodError = AS1_RecvBlock(Buffer, n_bytes, &Lectura_Buffer);
-					AS1_SendBlock(Buffer, n_bytes, &Lectura_Buffer);
+					AS2_SendBlock(Buffer, n_bytes, &Lectura_Buffer);
 					estado = ESPERAR;
 					break;
 			    case INFRARROJO:
+			    	Bit4_NegVal();
+			    	CodError = AD1_Enable();
+					// Otras mediciones
+					ADC16 = 0;
+					//MADC16 = 0; // Promedio de mediciones
+					CodError = AD1_Measure(TRUE);
+					CodError = AD1_GetValue16(&ADC16);
+					/*for (i = 0; i<16; i++){
+					  				CodError = AD1_Measure(TRUE);
+					  				CodError = AD1_GetValue16(&ADC16);
+					  				MADC16= MADC16+(ADC16>>4);
+					  				delay_ms(4);
+					}*/
+					
+					CodError = AD1_Disable();
+					Trama_PC[2] = (ADC16 >> 11) & 0x1F;  //  5 bit mas significativo 
+					Trama_PC[3] = (ADC16>>4) & 0x7F;  // bits restantes 
+					CodError = AS1_SendBlock(Trama_PC,4,&Enviados); 
 			    	estado = ESPERAR;
 			    	break;
 				

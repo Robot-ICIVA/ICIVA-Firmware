@@ -211,7 +211,11 @@ void  AS1_OnRxChar(void){
 		}
 		else if (command == 3){
 					 found_band = found_band+1 ; // es un commando y se lee el siguiente byte
-					 estado_temp = INFRARROJO;
+					 estado = INFRARROJO;
+					 found_band = 0; // Se termino la lectura del Bloque, se reincia la lectura
+					 command = 0;
+					 anuncio = 0;
+					 estado_temp = 0; // se reinicia
 		}
 		else{
 			found_band = 0; // No es un commando, se reinicia el proceso de lectura
