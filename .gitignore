@@ -9,7 +9,7 @@
 **/Project_Headers
 **/Lib
 **/Generated_Code
-
+**/.vscode
 *.cproject
 *.project
 *.g_c
