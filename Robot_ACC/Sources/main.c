@@ -34,6 +34,7 @@ la salida del sensor infrarrojo
 #include "Bit4.h"
 #include "Bit5.h"
 #include "AS2.h"
+#include "TI1.h"
 #include "PWM1.h"
 /* Include shared modules, which are used for whole project */
 #include "PE_Types.h"
@@ -79,7 +80,7 @@ void main(void){
   PE_low_level_init();
   
   /*** End of Processor Expert internal initialization.                    ***/
-
+  TI1_Disable();
   /* Write your code here */
 	 for(;;) {
 		 switch (estado){
@@ -96,13 +97,20 @@ void main(void){
 					Vellow =  (unsigned short)Buffer[3];
 					Vel = (Velup<<8)+Vellow;
 					Motores(Motor, Dir, Vel);
-					delay_ms(2000);
-					Motores(Motor, Dir, 0);
+					//TI1_Enable();
+					estado = ESPERAR;
+					break;
+					
+				case MOTORES_APAGAR:
+					
+					TI1_Disable();
+					Motores(1, 1, 0);
+					Motores(0, 1, 0);
 					estado = ESPERAR;
 					break;
 					
 			    case CAMARA:
-			    	Bit4_NegVal();
+			    	
 					Lectura_Buffer = n_bytes;
 					CodError = AS1_RecvBlock(Buffer, n_bytes, &Lectura_Buffer);
 					AS2_SendBlock(Buffer, n_bytes, &Lectura_Buffer);
