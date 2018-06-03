@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PEproject>
   <Header>
-    <Name>Robot_ACC</Name>
+    <Name>Robot_ACC_Fase2</Name>
     <SavedBy>luisi</SavedBy>
-    <ModificationStamp>40</ModificationStamp>
+    <ModificationStamp>42</ModificationStamp>
     <Date>2018-06-03</Date>
     <IDE>Eclipse IDE</IDE>
     <PEversion>1.9.0.RT6_b1411-0406</PEversion>
@@ -29,7 +29,7 @@
     <UseExistingModules>true</UseExistingModules>
     <RenamePeripheries>false</RenamePeripheries>
     <Autodependency>true</Autodependency>
-    <ProjectCompNumb>59</ProjectCompNumb>
+    <ProjectCompNumb>62</ProjectCompNumb>
     <DelUnusedPreviouslyGenFiles>true</DelUnusedPreviouslyGenFiles>
     <GeneratedCodeFrozen>false</GeneratedCodeFrozen>
     <AssignInitComponentNameToPrph>true</AssignInitComponentNameToPrph>
@@ -10347,10 +10347,10 @@
         <ReadOnly>false</ReadOnly>
         <UserReadOnly>false</UserReadOnly>
         <PropertyModelIsAutomatic>false</PropertyModelIsAutomatic>
-        <Index>0</Index>
-        <Value>true</Value>
+        <Index>1</Index>
+        <Value>false</Value>
         <LastSelection>true</LastSelection>
-        <LastUserSel>yes</LastUserSel>
+        <LastUserSel>no</LastUserSel>
         <UsrMethodName>Enable</UsrMethodName>
       </ItemState>
       <ItemState>
