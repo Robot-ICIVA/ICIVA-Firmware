@@ -49,6 +49,7 @@ int true= 1;
 unsigned short ADC16=0;
 
 unsigned char estado = ESPERAR;
+unsigned char last_estado = ESPERAR ;
 
 // Variables COMM
 unsigned char CodError;
@@ -97,6 +98,7 @@ void main(void){
 					break;
 					
 				case MOTORES:
+					TI1_Disable(); // Deshabilitar timer
 					Send_ACK(); // Enviar ack de comando
 					Lectura_Buffer = n_bytes; // Se leyo el comando. Leer restantes
 					CodError = AS1_RecvBlock(Buffer, n_bytes, &Lectura_Buffer);
@@ -111,18 +113,20 @@ void main(void){
 					Vellow2 =  (unsigned short)Buffer[5];
 					Vel2 = (Velup2<<8)+Vellow2;
 					Motores(Dir1, Vel1, Dir2, Vel2); // Poner pwm en motoress
-					//TI1_Enable();
+					TI1_Enable();
 					estado = ESPERAR;
 					break;
 					
 				case MOTORES_APAGAR:
-					Send_ACK(); // Enviar ack de comando
+					TI1_Disable(); // Deshabilitar timer
 					Motores(1, 0, 1, 0);
+					
 					estado = ESPERAR;
 					break;
 					
 			    case CAMARA:
 			    	Send_ACK(); // Enviar ack de comando
+			    	Bit5_NegVal();
 					Lectura_Buffer = n_bytes;
 					CodError = AS1_RecvBlock(Buffer, n_bytes, &Lectura_Buffer);
 					AS2_SendBlock(Buffer, n_bytes, &Lectura_Buffer);

@@ -179,7 +179,7 @@ void  AS1_OnError(void)
 ** ===================================================================
 */
 void  AS1_OnRxChar(void){
-	
+	Bit4_NegVal();
 	if(found_band == 0){
 		CodError = AS1_RecvChar( & anuncio ) ; // Header 0xff
 			if (anuncio  == 0xff ) {
@@ -201,10 +201,7 @@ void  AS1_OnRxChar(void){
 		else if (command == 2){
 			 found_band = found_band+1 ; 
 			 estado_temp = CAMARA;
-			 found_band = 0; // Se termino la lectura del Bloque, se reincia la lectura
-			 command = 0;
-			 anuncio = 0;
-			 estado_temp = 0; // se reinicia
+			 n_bytes = n_bytes-1; // bytes restantes por leer
 		}
 		else if (command == 3){
 					 estado = INFRARROJO;
