@@ -104,8 +104,8 @@ void main(void){
 					break;
 					
 				case MOTORES:
-					//Motores(dir1, PWM_ri, dir2, PWM_rd);
-					//TI1_Enable();
+					Motores(dir1, PWM_ri, dir2, PWM_rd);
+					TI1_Enable();
 					estado = INFRARROJO;
 					break;
 					
@@ -129,12 +129,12 @@ void main(void){
 			    	distancia = poly(ADC());
 			    		
 			    	errorDist = distancia - 15;
-			    	if(distancia<10.0)
+			    	if(distancia<15.0)
 						Bit5_ClrVal();
 					else
 						Bit5_SetVal();
 		
-
+			    	delay_ms(10);
 			    	estado = CONTROL;
 			    	break;
 			    case CONTROL :
@@ -239,7 +239,7 @@ float ADC(){ // Devuelve el voltaje medido
 
 float poly(float voltage){
 	float poly_a = 0;
-	poly_a = 100*(1.5274-4.2206*voltage+4.915044*pow(voltage, 2)-2.58548*pow(voltage, 3)+5.04663*pow(voltage, 4));
+	poly_a = 152.7-422.1*voltage+491.5*pow(voltage, 2)-258.6*pow(voltage, 3)+50.47*pow(voltage, 4);
 	/*poly_a = (float)(
 			-5.0018e+04*(pow(voltage,12))+
 			6.009e+05*pow(voltage,11)-
