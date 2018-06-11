@@ -33,7 +33,8 @@ void main ()
 	Buffer[2] = (int)'1';
 	Buffer[3] = (int)'2';
 	Buffer[4] = (int)' ';
-	Buffer[5] = (int)'h';
+	Buffer[5] = (int)'1';
+	Buffer[6] = (int)'1';
 	decode(Buffer);
 	i = 0;
 	while (Data[i] != 0){

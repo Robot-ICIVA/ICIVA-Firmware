@@ -41,15 +41,15 @@ la salida del sensor infrarrojo
 #include "PE_Error.h"
 #include "PE_Const.h"
 #include "IO_Map.h"
-#include "math.h"
 
 /* User includes (#include below this line is not maintained by Processor Expert) */
 int i=0;
 int false = 0;
 int true= 1;
-//unsigned short ADC16=0;
+unsigned short ADC16=0;
 
-unsigned char estado = INFRARROJO;
+unsigned char estado = ESPERAR;
+unsigned char last_estado = ESPERAR ;
 
 // Variables COMM
 unsigned char CodError;
@@ -61,37 +61,22 @@ unsigned char n_bytes;
 unsigned char command; // Comando enviado desde pc para cambiar estado del sistema
 unsigned short Enviados = 4;	
 
-// Variables Motores
-unsigned short PWM_rd;
-unsigned short PWM_ri;
-float k_rd=3000;
-float k_ri=3000;
-unsigned int dir1;
-unsigned int dir2;
-unsigned short ADC16;
-float voltage;
+
 // Variables COMM
 unsigned int error;
-unsigned short Velup,Vellow;
-unsigned short Vel;
-unsigned short Dir;
+unsigned short Velup1,Vellow1, Velup2, Vellow2;
+unsigned short Vel1, Vel2;
+unsigned short Dir1, Dir2;
 unsigned short Lectura_Buffer=4;
 unsigned char Buffer[40];
-unsigned char Trama_PC[4]={0xff, 0x02, 0x00, 0x00}; // Esta es una primera trama
-float errorDist;
-// ADC_
-const char ADC_vector_len = 20;
-float ADC_vector[20];
+unsigned char Trama_PC[4]={0xff, 0x02, 0x00, 0x00}; // Esta es una primera trama, sinc+packet_size+data
+unsigned char Trama_ACK[2]={0xff, 0x00};
 
 void delay_ms (unsigned int time_delay);
 void Motor( unsigned short Motor, unsigned short Direccion, unsigned short Velocidad);
 void Motores( unsigned short Dir1, unsigned short Vel1, unsigned short Dir2, unsigned short Vel2);
-float distancia;
-float ADC();
-float poly(float voltage);
-float Lowest();
-float Filtro(float percent);
-float measure(); // Muestrea 20 veces el canal ADC, filtra y  regresa el promedio de la medida
+void Send_ACK();
+
 void main(void){
   /* Write your local variable definition here */
 
@@ -103,70 +88,73 @@ void main(void){
   /* Write your code here */
 	 for(;;) {
 		 switch (estado){
-				
+		 	 	case RESET:
+					Send_ACK(); // Enviar ack de comando
+					Motores(1, 0, 1, 0); //Apagar motores
+					estado = ESPERAR;
+					break;
+		 	 		
 				case ESPERAR:
 					break;
 					
 				case MOTORES:
-					Motores(dir1, PWM_ri, dir2, PWM_rd);
+					TI1_Disable(); // Deshabilitar timer
+					Send_ACK(); // Enviar ack de comando
+					Lectura_Buffer = n_bytes; // Se leyo el comando. Leer restantes
+					CodError = AS1_RecvBlock(Buffer, n_bytes, &Lectura_Buffer);
+					//Motor1 ( Motor izquierdo)
+					Dir1 = (unsigned short)Buffer[0]; 
+					Velup1 =  (unsigned short)Buffer[1];
+					Vellow1 =  (unsigned short)Buffer[2];
+					Vel1 = (Velup1<<8)+Vellow1;
+					// Motor2( Motor derecho)
+					Dir2 = (unsigned short)Buffer[3];
+					Velup2 =  (unsigned short)Buffer[4];
+					Vellow2 =  (unsigned short)Buffer[5];
+					Vel2 = (Velup2<<8)+Vellow2;
+					Motores(Dir1, Vel1, Dir2, Vel2); // Poner pwm en motoress
 					TI1_Enable();
-					estado = INFRARROJO;
+					estado = ESPERAR;
 					break;
 					
 				case MOTORES_APAGAR:
+					TI1_Disable(); // Deshabilitar timer
+					Motores(1, 0, 1, 0);
 					
-					TI1_Disable();
-					Motores(1,0,1,0);
 					estado = ESPERAR;
 					break;
 					
 			    case CAMARA:
-			    	
+			    	Send_ACK(); // Enviar ack de comando
+			    	Bit5_NegVal();
 					Lectura_Buffer = n_bytes;
 					CodError = AS1_RecvBlock(Buffer, n_bytes, &Lectura_Buffer);
 					AS2_SendBlock(Buffer, n_bytes, &Lectura_Buffer);
 					estado = ESPERAR;
 					break;
 			    case INFRARROJO:
-			    	Bit4_NegVal();	
-
-			    	distancia = poly(measure());
-			    		
-			    	errorDist = distancia - 15;
-			    	if(distancia<15.0)
-						Bit5_ClrVal();
-					else
-						Bit5_SetVal();
-		
-			    	delay_ms(10);
-			    	estado = CONTROL;
+			    	Send_ACK(); // Enviar ack de comando
+			    	CodError = AD1_Enable();
+					// Otras mediciones
+					ADC16 = 0;
+					//MADC16 = 0; // Promedio de mediciones
+					CodError = AD1_Measure(TRUE);
+					CodError = AD1_GetValue16(&ADC16);
+					/*for (i = 0; i<16; i++){
+					  				CodError = AD1_Measure(TRUE);
+					  				CodError = AD1_GetValue16(&ADC16);
+					  				MADC16= MADC16+(ADC16>>4);
+					  				delay_ms(4);
+					}*/
+					
+					CodError = AD1_Disable();
+					Trama_PC[2] = (unsigned char)(ADC16 >> 11) & 0x1F;  //  5 bit mas significativo 
+					Trama_PC[3] =  (unsigned char)(ADC16>>4) & 0x7F;  // bits restantes 
+					Enviados = 4;
+					CodError = AS1_SendBlock(Trama_PC,4,&Enviados); 
+			    	estado = ESPERAR;
 			    	break;
-			    case CONTROL :
-			    if (errorDist <0.0){
-			    	errorDist = -errorDist; // Positivo
-			    	dir1 = 0; // Hacia atras
-			    	dir2 = 0;
-				    PWM_rd= roundf(k_rd*errorDist);
-				    PWM_ri= roundf(k_ri*errorDist);
-			    }	
-			    else{
-			    	dir1 = 1; // Hacia adelante
-			    	dir2 = 1;
-			    	PWM_rd= roundf(k_rd*errorDist);
-					PWM_ri= roundf(k_ri*errorDist);
-			    	
-			    }
-			    if(PWM_rd > 65000)
-			    	PWM_rd = 65000;
-			    if(PWM_ri > 65000)
-			    	PWM_ri = 65000;
-			    if(PWM_ri <20000)
-					PWM_ri = 0;
-			    if(PWM_rd <20000)
-			    	PWM_rd = 0;
-			    delay_ms(10);
-			    estado = MOTORES;
-			    	break;
+				
 				default:
 					break;
 		 }
@@ -177,6 +165,7 @@ void main(void){
   for(;;){}
   /*** Processor Expert end of main routine. DON'T WRITE CODE BELOW!!! ***/
 } /*** End of main routine. DO NOT MODIFY THIS TEXT!!! ***/
+
 
 void Motor( unsigned short Motor, unsigned short Direccion, unsigned short Velocidad){
 	if (Motor == 1) {
@@ -208,7 +197,7 @@ void Motor( unsigned short Motor, unsigned short Direccion, unsigned short Veloc
 
 void Motores( unsigned short Dir1, unsigned short Vel1, unsigned short Dir2, unsigned short Vel2){
 	Motor(1, Dir1, Vel1); // Motor1
-	Motor(2, Dir2, Vel2); // Motor2 = Motor derecha desde arriba-atras
+	Motor(2, Dir2, Vel2); // Motor2
 }
 /* END main */
 void delay_ms (unsigned int time_delay){
@@ -220,97 +209,12 @@ void delay_ms (unsigned int time_delay){
 		CodError = FC161_GetTimeMS(&time);
 	}
 	
+}
+
+void Send_ACK(){
+	Enviados = 2;
+	CodError = AS1_SendBlock(Trama_ACK,2,&Enviados); 
 	
-}
-
-float ADC(){ // Devuelve el voltaje medido
-
-			CodError = AD1_Enable();
-			// Otras mediciones
-			ADC16 = 0;
-			//MADC16 = 0; // Promedio de mediciones
-			CodError = AD1_Measure(TRUE);
-			CodError = AD1_GetValue16(&ADC16);
-			/*for (i = 0; i<16; i++){
-							CodError = AD1_Measure(TRUE);
-							CodError = AD1_GetValue16(&ADC16);
-							MADC16= MADC16+(ADC16>>4);
-							delay_ms(4);
-			}*/
-		
-			ADC16 = (ADC16>>4) ;  //  5 bit mas significativo 
-			CodError = AD1_Disable();
-			voltage = (float)3.1/(pow(2,12)-1)*ADC16;
-			
-			return voltage; 
-}
-
-float poly(float voltage){
-	float poly_a = 0;
-	poly_a = 152.7-422.1*voltage+491.5*pow(voltage, 2)-258.6*pow(voltage, 3)+50.47*pow(voltage, 4);
-	/*poly_a = (float)(
-			-5.0018e+04*(pow(voltage,12))+
-			6.009e+05*pow(voltage,11)-
-			3.25e+06*pow(voltage,10)+
-			1.042e+07*pow(voltage,9)-
-			2.215e+07*pow(voltage,8)+
-			3.276e+07*pow(voltage,7)-
-			3.456e+07*pow(voltage,6)+
-			2.6177e+07*pow(voltage,5)-
-			1.412e+07*pow(voltage,4)+
-			5.278e+06*pow(voltage,3)-
-			1.297e+06*pow(voltage,2)+
-			1.8723e+05*pow(voltage,1)-
-			1.190e+04);
-			*/
-
-return poly_a;
-}
-
-
-float Lowest(){
-    int i;
-    float Lowest = 3.1; // Valor máximo del ADC
-    for (i = 0; i < ADC_vector_len; i++){
-       
-        if(ADC_vector[i]< Lowest){
-            Lowest = ADC_vector[i];
-        }
-    }
-    
-    return Lowest;
-}
-
-float Filtro(float percent){ // Porcentaje de 0  a 1
-    int i, j;
-    float ADC_filter[20]; //Vector de 0
-    float lowest=Lowest(); 
-    float threshold = lowest*(1+percent);
-    float sum ;
-    
-    sum = 0;
-    j = 0;
-      for (i = 0; i < ADC_vector_len; i++){
-       if(ADC_vector[i]< threshold){
-            ADC_filter[j] = ADC_vector[i] ;
-            j++;
-        }
-    }
-    
-    
-    for (i = 0; i < j; i++){
-        sum = sum + ADC_vector[i];
-    }
-    return sum/(j);
-}
-
-float measure(){
-	int i;
-	for (i = 0; i < 20; i++){
-	        ADC_vector[i]= ADC();
-	        delay_ms(3); // @20 muestras, 60 ms
-	    }
-	return Filtro(0.17); // Regresar las muestras filtradas, 10 % de filtraje del valor mas bajo
 }
 /*!
 ** @}
