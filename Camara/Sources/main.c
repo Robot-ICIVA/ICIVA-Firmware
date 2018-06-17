@@ -53,29 +53,36 @@ unsigned short ADC16=0;
 
 unsigned char estado = ESPERAR;
 unsigned char last_estado = ESPERAR ;
-
+unsigned char estado_camara = ESPERAR;
 
 // Variables Motores
 unsigned short PWM_rd;
 unsigned short PWM_ri;
 float k_rd=3000;
 float k_ri=3000;
-unsigned int dir1;
-unsigned int dir2;
+unsigned int dir1;  // Rueda izquierda
+unsigned int dir2;  // Rueda derecha
+
+
+// Variables ADC
 unsigned short ADC16;
 float voltage;
 
 
 // Variables COMM
+
+// Banderas
+bool serial_start;
+unsigned char serial_end;
 unsigned char CodError;
 bool primero = FALSE;
-unsigned char anuncio;
-unsigned char anuncio2;
-unsigned char found_band;
-unsigned char found_band2;
-unsigned char n_bytes;
 unsigned char command; // Comando enviado desde pc para cambiar estado del sistema
-unsigned short Enviados = 0;	
+unsigned short Enviados = 0;
+unsigned short Recibidos = 0;
+
+
+
+// Variables camara
 unsigned char mx, my;
 
 
@@ -90,12 +97,21 @@ unsigned char packet_size;
 unsigned char Buffer[100];
 unsigned char Trama_PC[4]={0xff, 0x02, 0x00, 0x00}; // Esta es una primera trama, sinc+packet_size+data
 unsigned char Trama_ACK[2]={0xff, 0x00};
-char TC_command[] = "TC 110 170 10 30 10 30\r";
+char TC_command[] = "TC 110 150 10 30 10 30\r";
 unsigned char Trama_Camara[100];
 
 const char ADC_vector_len = 20;
 float ADC_vector[20];
 
+// Parametros de la camara
+const unsigned char cx = 40; // 80
+const unsigned char cy = 71; // 143
+const unsigned char tx = 5; // threshold en x
+
+
+void force_idle();
+void send_TC();
+bool Ack();
 void delay_ms (unsigned int time_delay);
 void Motor( unsigned short Motor, unsigned short Direccion, unsigned short Velocidad);
 void Motores( unsigned short Dir1, unsigned short Vel1, unsigned short Dir2, unsigned short Vel2);
@@ -109,12 +125,10 @@ void clean_data();
 void decode( );
 void clean_buffer();
 int string_is_number(char *str);
+unsigned char ACK_cam[4];
 
-// Parametros de la camara
-const unsigned char cx = 40; // 80
-const unsigned char cy = 71; // 143
-const unsigned char tx = 5; // threshold en x
-void TC();
+
+
 
 void main(void){
   /* Write your local variable definition here */
@@ -125,6 +139,18 @@ void main(void){
   /*** End of Processor Expert internal initialization.                    ***/
   TI1_Disable();
   /* Write your code here */
+  estado_camara = ACK;
+  			    	
+	force_idle();
+	//AS1_SendChar('I');
+	
+	
+	delay_ms(20); //Delay magico que arregla todo
+	clean_buffer();
+	clean_data();
+	estado_camara = TC;
+	serial_end = 'N';
+	send_TC();
 	 for(;;) {
 		 switch (estado){
 		 	 	case RESET:
@@ -134,44 +160,110 @@ void main(void){
 					break;
 		 	 		
 				case ESPERAR:
-					delay_ms(20);
 					estado= CAMARA;
 					break;
 					
 				case MOTORES:
 					
 					Motores(dir1, PWM_ri, dir2, PWM_rd);
-					//TI1_Enable();
+					TI1_Enable();
 					estado = ESPERAR;
 					break;
 					
 				case MOTORES_APAGAR:
-					//TI1_Disable(); // Deshabilitar timer
+					TI1_Disable(); // Deshabilitar timer
 					Motores(1, 0, 1, 0);
 					
 					estado = ESPERAR;
 					break;
 					
 			    case CAMARA:
-			    	AS2_ClearRxBuf();
-			    	clean_buffer();
-			    	clean_data();
+			    	
+			    	//Force idle
+			    	
+			    	serial_end = 'N';
+			    	while(serial_end == 'N'){
+						delay_ms(10);
 					
-			    	TC();
-			    	while(found_band !=2){} // esperar terminar lectura
-			    	found_band2 = 0;
+			    	}
+			    	
 			    	decode();
-			    	AS2_SendChar(13);
-			    	AS2_SendChar(13); 
-			    	AS2_SendChar(13);
-			    	AS2_SendChar(13); 
-			    	AS2_SendChar(13);
 			    	
 			    	Enviados = packet_size;
 			    	//CodError = AS1_SendBlock(Buffer, Enviados,&Enviados);
 			    	
 			    	mx = (unsigned char)Data[0];
 			    	my = (unsigned char)Data[1];
+			    	
+			    	AS1_SendChar(mx);
+			    	//AS2_ClearRxBuf();
+			    	/*
+			    	clean_buffer();
+			    	clean_data();
+			    	// Confirmar que la camara esta en idle
+			    	estado_camara = ACK;
+			    	
+			    	AS2_SendChar(13);
+					
+					estado_camara = ACK;
+					serial_end = 'N';
+					while(serial_end == 'N'){
+						delay_ms(10);
+						AS2_SendChar(13);
+						//send_TC();
+					}
+					
+					AS1_SendChar('I');
+			    	AS2_ClearRxBuf();
+					// Enviar comando de camara
+			    	
+			    	 //ConfirmarACK
+			    	//serial_end = FALSE;
+			    	delay_ms(1000);
+			    	//while(serial_end == FALSE){
+			    		//delay_ms(10);
+			    		//send_TC();
+			    	//}
+			    	//AS1_SendChar('A');
+			    	
+			    	
+			    	// Decodificar paquete TC
+			    	//serial_end = FALSE;
+			    	//estado_camara = TC;
+			    	//delay_ms(200);
+			    	
+			    	/*while(serial_end == FALSE){
+							//delay_ms(50);
+							//send_TC();
+					}
+			    	
+			    	serial_end = FALSE;
+			    	
+			    	 AS1_SendChar('F');
+			   
+			    	 //serial_end = FALSE;
+			    	 /*while(serial_end!= TRUE){
+			    		 send_TC();
+			    		 delay_ms(10);
+			    	 }
+			    	 */
+			    	 //estado_camara = TC;
+			    	 //while(serial_end!= TRUE){
+			    		 
+			    	// }
+			    	 
+					 // Cambiar el estado a recibir TC
+			    	
+			    	//while(serial_end == 0){}
+			    	//delay_ms(100);
+			    	//serial_end = 0; // Bajar bandera
+			    	//estado_camara = DCARE;
+			    	
+			    	//AS2_SendChar(13);
+			    	
+			    	
+			    	
+			    	/*
 			    	AS1_SendChar(mx);
 			    	
 			    	if (mx > cx +tx)  // Mover rueda derecha, ir  a la izquierda
@@ -197,31 +289,15 @@ void main(void){
 						PWM_ri = 0;
 			    		estado = MOTORES;
 			    		// Objeto no centrados
-			    	}
+			    	}*/
 			    	clean_data();
 					//found_band2= 0;
+					 
+			    	
+			    	estado = ESPERAR;
 					break;
 			    case INFRARROJO:
-			    	//Send_ACK(); // Enviar ack de comando
-			    	CodError = AD1_Enable();
-					// Otras mediciones
-					ADC16 = 0;
-					//MADC16 = 0; // Promedio de mediciones
-					CodError = AD1_Measure(TRUE);
-					CodError = AD1_GetValue16(&ADC16);
-					/*for (i = 0; i<16; i++){
-					  				CodError = AD1_Measure(TRUE);
-					  				CodError = AD1_GetValue16(&ADC16);
-					  				MADC16= MADC16+(ADC16>>4);
-					  				delay_ms(4);
-					}*/
-					
-					CodError = AD1_Disable();
-					Trama_PC[2] = (unsigned char)(ADC16 >> 11) & 0x1F;  //  5 bit mas significativo 
-					Trama_PC[3] =  (unsigned char)(ADC16>>4) & 0x7F;  // bits restantes 
-					Enviados = 4;
-					CodError = AS1_SendBlock(Trama_PC,4,&Enviados); 
-			    	estado = ESPERAR;
+
 			    	break;
 				
 				default:
@@ -235,19 +311,33 @@ void main(void){
   /*** Processor Expert end of main routine. DON'T WRITE CODE BELOW!!! ***/
 } /*** End of main routine. DO NOT MODIFY THIS TEXT!!! ***/
 
-void TC(){
+
+
+
+
+/* END main */
+
+void force_idle(){
+	serial_end = 'N';
+	AS2_SendChar(13);
+	while(serial_end == 'N'){
+			delay_ms(20);
+			AS2_ClearRxBuf();
+			AS2_SendChar(13);
+			//send_TC();
+		}
+}
+void send_TC(){
+	
 	unsigned short i;
 	unsigned short length = (unsigned short) strlen(TC_command);
 	for (i = 0; i < length; i++){
 		Trama_Camara[i]= (unsigned char)TC_command[i];
 	}
 	Enviados = length ;
-	CodError = AS2_SendBlock(Trama_Camara, Enviados,&Enviados); 
+	CodError = AS2_SendBlock(Trama_Camara, Enviados,&Enviados);
 	
-}
-
-
-/* END main */
+} 
 void delay_ms (unsigned int time_delay){
 	
 	unsigned short time;
@@ -261,10 +351,15 @@ void delay_ms (unsigned int time_delay){
 
 
 
-
+bool Ack(){
+	Recibidos = 4;
+	
+	//AS2_RecvBlock(ACK_cam, 4, Recibidos);
+	if (ACK_cam[0]== 'A' & ACK_cam[1]== 'C' ){}
+}
 void decode(){
   // Reconstruir string
-	int i,j;
+	int i, j;
 	char str[100];
 	char * pch;
 	i = 0;

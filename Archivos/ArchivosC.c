@@ -7,7 +7,7 @@
 void decode( int *Buffer);
 void clean_buffer(int* Buffer, int length);
 int string_is_number(char *str);
-
+char TC_command[] = "TC 30 100 30 100 30 100 \r";
  // Variables COMM CMUcam1
 		// Decodificacion de paquetes
 	
@@ -41,8 +41,13 @@ void main ()
 		printf("Data %d = %d ", i, Data[i]);
 		i++;
 	}
-
-
+	
+	int ii =2;
+	unsigned char p;
+	p = (unsigned char) ii;
+	printf("%s", TC_command );
+	printf("%s", TC_command );
+	printf("\n%d", p);
 
 }
 

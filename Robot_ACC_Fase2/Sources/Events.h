@@ -73,9 +73,12 @@ extern bool primero;
 extern unsigned char anuncio;
 extern unsigned char anuncio2;
 extern unsigned char found_band;
+extern unsigned char found_band2;
 extern unsigned char n_bytes;
 extern unsigned char command; // Comando enviado desde pc para cambiar estado del sistema
 
+extern unsigned char packet_size;
+extern unsigned char Buffer[100];
 
 void AD1_OnEnd(void);
 /*

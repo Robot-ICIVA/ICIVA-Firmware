@@ -29,11 +29,12 @@
 
 #include "Cpu.h"
 #include "Events.h"
-unsigned char c1;
-unsigned char c2;
-unsigned char estado_temp ; 
 
-unsigned char counter;
+
+unsigned char c1;
+unsigned char estado_temp ; 
+unsigned char  wait_r = 0;
+unsigned char counter = 0;
 /* User includes (#include below this line is not maintained by Processor Expert) */
 
 /*
@@ -179,62 +180,7 @@ void  AS1_OnError(void)
 ** ===================================================================
 */
 void  AS1_OnRxChar(void){
-	Bit4_NegVal();
-	if(found_band == 0){
-		CodError = AS1_RecvChar( & anuncio ) ; // Header 0xff
-			if (anuncio  == 0xff ) {
-				found_band = 1;		 
-			}
-	}
-	else if (found_band == 1){
-		 CodError =  AS1_RecvChar( &n_bytes) ; // Header numero de bytes de data
-		 found_band = found_band+1;
-	}
-	else if (found_band == 2){
-		CodError =  AS1_RecvChar( & command ) ;
-		if (command == 1){
-			Bit4_NegVal();
-			 found_band = found_band+1 ; // es un commando y se lee el siguiente byte
-			 n_bytes = n_bytes-1; // bytes restantes por leer
-			 estado_temp = MOTORES;
-		}
-		else if (command == 2){
-			 found_band = found_band+1 ; 
-			 estado_temp = CAMARA;
-			 n_bytes = n_bytes-1; // bytes restantes por leer
-		}
-		else if (command == 3){
-					 estado = INFRARROJO;
-					 found_band = 0; // Se termino la lectura del Bloque, se reincia la lectura
-					 command = 0;
-					 anuncio = 0;
-					 estado_temp = 0; // se reinicia
-		}
-		else if (command == 4){
-						 estado = RESET;
-						 found_band = 0; // Se termino la lectura del Bloque, se reincia la lectura
-						 command = 0;
-						 anuncio = 0;
-						 estado_temp = 0; // se reinicia
-			}
-		else{
-			found_band = 0; // No es un commando, se reinicia el proceso de lectura
-			command = 0;
-			anuncio = 0;
-		}
-	}
-	else { // El estado del sistema se actualiza cuando se termina de leer el bloque
-			 if (found_band == (n_bytes+2)){ // Se lee hasta que se alcance el numero de bytes de trama (+ los dos de headers)
-				 found_band = 0; // Se termino la lectura del Bloque, se reincia la lectura
-				 command = 0;
-				 anuncio = 0;
-				 estado = estado_temp; // Se actualiza el estado del sistema
-				 estado_temp = 0; // se reinicia
-			 }
-			 else {found_band = found_band+1;} // se lee el siguiente byte
 	
-	
-	}
 }
 
 /*
@@ -326,39 +272,60 @@ void  AS2_OnError(void)
 */
 void  AS2_OnRxChar(void)
 {
-	Bit4_NegVal(); // PTE6
-	CodError = AS2_RecvChar( & anuncio ) ; //Se debe leer el byte  o no sale de la interrupcion
-	if(found_band2 == 0){
-			if (anuncio  == 'M' ) { // Paquete tipo M
-				found_band2 = 1;	
-				packet_size = 1;
-				counter = 0;
-			    Buffer[counter]= anuncio;
-				Bit3_NegVal();	 
-			}
-
+	
+	// //Se debe leer el byte  o no sale de la interrupcion
+	switch (estado_camara){
+				case TC:
+					CodError = AS2_RecvChar( &c1) ;
+					
+						if (c1  == 'M' ) { // Paquete tipo M
+							Bit5_NegVal(); // PTE6
+							packet_size = 1;
+							counter = 0;
+							wait_r = 1;
+							Buffer[counter]= c1;
+						}
+						
+						if(wait_r == 1){
+							if (c1 == 13){
+								serial_end = 'M';
+								wait_r = 0;
+							}
+						
+						 else {
+								 counter ++;
+								 Buffer[counter]= c1;
+								 packet_size = packet_size+1;} // se lee el siguiente byte
+							
+						}
+				  break;
+				case ACK:
+					CodError = AS2_RecvChar( &c1) ;
+					//AS1_SendChar(c1);
+					
+						if (c1  == 'A' ) { // Paquete tipo M
+							Bit4_NegVal(); // PTE6
+							
+							wait_r = 1;
+							//serial_end = 1;
+						}
+						if (c1  == 'N' ) { // Paquete tipo M
+							Bit5_NegVal(); // PTE6
+							serial_end = 'N';
+							//serial_end = 1;
+						}
+						if(wait_r == 1){
+							if (c1 == 13){
+								serial_end = 'A';
+								wait_r = 0;
+							}
+							
+						}
+					
+					
+				break;
 	}
-	else if (found_band2 == 1){
-			
-			if  (anuncio ==13) // Caracter /r
-			{
-				Bit5_NegVal(); // PTC2
-			    //estado_temp = CAMARA;
-			     n_bytes = n_bytes-1; // bytes restantes por leer
-				 found_band2 = 2; // Se termino la lectura del Bloque, se reincia la lectura
-				 
-				 command = 0;
-				 anuncio = 0;
-				 estado = estado_temp; // Se actualiza el estado del sistema
-				 estado_temp = 0; // se reinicia
-				
-			 }
-			 else {
-				 counter ++;
-				 Buffer[counter]= anuncio;
-				 packet_size = packet_size+1;} // se lee el siguiente byte
-	 
-	}
+	
 
 }
 /*
