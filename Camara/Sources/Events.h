@@ -47,6 +47,10 @@
 #include "Bit5.h"
 #include "AS2.h"
 #include "TI1.h"
+#include "EInt1.h"
+#include "Bit6.h"
+#include "FC162.h"
+#include "Bit7.h"
 #include "PWM1.h"
 
 #define ESPERAR  2
@@ -63,7 +67,7 @@
 #define ACK 11
 #define TC 10
 #define DCARE  12
-
+#define GM  13
 // Variables Maquina de estados
 //const unsigned char MOTORES;
 // Variables Maquina de estados
@@ -83,6 +87,8 @@ extern unsigned char command; // Comando enviado desde pc para cambiar estado de
 extern unsigned char estado_camara;
 extern unsigned char packet_size;
 extern unsigned char Buffer[100];
+extern void delay_ms (unsigned int time_delay);
+extern void send_TW ();
 
 void AD1_OnEnd(void);
 /*
@@ -339,6 +345,20 @@ void TI1_OnInterrupt(void);
 **         when the component is enabled - <Enable> and the events are
 **         enabled - <EnableEvent>). This event is enabled only if a
 **         <interrupt service/event> is enabled.
+**     Parameters  : None
+**     Returns     : Nothing
+** ===================================================================
+*/
+
+void EInt1_OnInterrupt(void);
+/*
+** ===================================================================
+**     Event       :  EInt1_OnInterrupt (module Events)
+**
+**     Component   :  EInt1 [ExtInt]
+**     Description :
+**         This event is called when an active signal edge/level has
+**         occurred.
 **     Parameters  : None
 **     Returns     : Nothing
 ** ===================================================================

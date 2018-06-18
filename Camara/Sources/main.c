@@ -35,6 +35,10 @@ la salida del sensor infrarrojo
 #include "Bit5.h"
 #include "AS2.h"
 #include "TI1.h"
+#include "EInt1.h"
+#include "Bit6.h"
+#include "FC162.h"
+#include "Bit7.h"
 #include "PWM1.h"
 /* Include shared modules, which are used for whole project */
 #include "PE_Types.h"
@@ -58,15 +62,19 @@ unsigned char estado_camara = ESPERAR;
 // Variables Motores
 unsigned short PWM_rd;
 unsigned short PWM_ri;
-float k_rd=3000;
-float k_ri=3000;
-unsigned int dir1;  // Rueda izquierda
-unsigned int dir2;  // Rueda derecha
+float k_rd=850;
+float k_ri=1000;
+float k_rd_infra=2500;
+float k_ri_infra=2500;
+unsigned short dir1;  // Rueda izquierda
+unsigned short dir2;  // Rueda derecha
 
 
 // Variables ADC
 unsigned short ADC16;
 float voltage;
+float distancia;
+float dt = 1.0;
 
 
 // Variables COMM
@@ -83,15 +91,17 @@ unsigned short Recibidos = 0;
 
 
 // Variables camara
-unsigned char mx, my;
+short mx, my;
 
+// Variables control
+short error_pixel;
+short lasterror_pixel;
+float errorDist =0;
 
 // Variables COMM
 int  Data[20] = {}; // Data del paquete M
 unsigned int error;
 unsigned short Velup1,Vellow1, Velup2, Vellow2;
-unsigned short Vel1, Vel2;
-unsigned short Dir1, Dir2;
 unsigned short Lectura_Buffer=4;
 unsigned char packet_size;
 unsigned char Buffer[100];
@@ -104,18 +114,19 @@ const char ADC_vector_len = 20;
 float ADC_vector[20];
 
 // Parametros de la camara
-const unsigned char cx = 40; // 80
-const unsigned char cy = 71; // 143
-const unsigned char tx = 5; // threshold en x
+const short cx = 40; // 80
+const short cy = 71; // 143
+const short tx = 10; // threshold en x
 
-
+void control_infra();
+void control_cam();
 void force_idle();
+void send_TW();
 void send_TC();
-bool Ack();
 void delay_ms (unsigned int time_delay);
 void Motor( unsigned short Motor, unsigned short Direccion, unsigned short Velocidad);
 void Motores( unsigned short Dir1, unsigned short Vel1, unsigned short Dir2, unsigned short Vel2);
-float distancia;
+
 float ADC();
 float poly(float voltage);
 float Lowest();
@@ -125,7 +136,7 @@ void clean_data();
 void decode( );
 void clean_buffer();
 int string_is_number(char *str);
-unsigned char ACK_cam[4];
+
 
 
 
@@ -139,18 +150,22 @@ void main(void){
   /*** End of Processor Expert internal initialization.                    ***/
   TI1_Disable();
   /* Write your code here */
-  estado_camara = ACK;
+  
+  
+  // Inicio camara
+	  lasterror_pixel = cx;
+	  estado_camara = ACK;
   			    	
 	force_idle();
 	//AS1_SendChar('I');
 	
 	
-	delay_ms(20); //Delay magico que arregla todo
+	delay_ms(30); //Delay magico que arregla todo
 	clean_buffer();
 	clean_data();
-	estado_camara = TC;
+	estado_camara = TC;//TC;
 	serial_end = 'N';
-	send_TC();
+	estado = ESPERAR;
 	 for(;;) {
 		 switch (estado){
 		 	 	case RESET:
@@ -160,144 +175,63 @@ void main(void){
 					break;
 		 	 		
 				case ESPERAR:
-					estado= CAMARA;
 					break;
 					
 				case MOTORES:
 					
 					Motores(dir1, PWM_ri, dir2, PWM_rd);
-					TI1_Enable();
-					estado = ESPERAR;
+					//TI1_Enable();
+					if (estado == MOTORES){estado = CAMARA;}
+					
 					break;
 					
 				case MOTORES_APAGAR:
-					TI1_Disable(); // Deshabilitar timer
+					//TI1_Disable(); // Deshabilitar timer
 					Motores(1, 0, 1, 0);
 					
 					estado = ESPERAR;
 					break;
 					
 			    case CAMARA:
-			    	
+			    	//delay_ms(1000);
 			    	//Force idle
-			    	
+			
+			    	clean_data();
+			    	clean_buffer();
 			    	serial_end = 'N';
+			    	estado_camara = TC;
+			    	
 			    	while(serial_end == 'N'){
-						delay_ms(10);
+						delay_ms(50);// Con este delay funciona o se queda pegado
+						AS1_SendChar(110);
 					
 			    	}
-			    	
+			    	//AS1_SendChar('V');
+			    	estado_camara = DCARE;
 			    	decode();
 			    	
 			    	Enviados = packet_size;
 			    	//CodError = AS1_SendBlock(Buffer, Enviados,&Enviados);
 			    	
-			    	mx = (unsigned char)Data[0];
-			    	my = (unsigned char)Data[1];
+			    	mx = (short)Data[0];
+			    	my = (short)Data[1];
 			    	
-			    	AS1_SendChar(mx);
-			    	//AS2_ClearRxBuf();
-			    	/*
-			    	clean_buffer();
-			    	clean_data();
-			    	// Confirmar que la camara esta en idle
-			    	estado_camara = ACK;
+			    	AS1_SendChar((unsigned char)mx);
+			    	//AS1_SendChar((unsigned char)mx);
+			    	control_cam();
 			    	
-			    	AS2_SendChar(13);
-					
-					estado_camara = ACK;
-					serial_end = 'N';
-					while(serial_end == 'N'){
-						delay_ms(10);
-						AS2_SendChar(13);
-						//send_TC();
-					}
-					
-					AS1_SendChar('I');
-			    	AS2_ClearRxBuf();
-					// Enviar comando de camara
+			    	if (estado == CAMARA) {estado = MOTORES ;}
 			    	
-			    	 //ConfirmarACK
-			    	//serial_end = FALSE;
-			    	delay_ms(1000);
-			    	//while(serial_end == FALSE){
-			    		//delay_ms(10);
-			    		//send_TC();
-			    	//}
-			    	//AS1_SendChar('A');
-			    	
-			    	
-			    	// Decodificar paquete TC
-			    	//serial_end = FALSE;
-			    	//estado_camara = TC;
-			    	//delay_ms(200);
-			    	
-			    	/*while(serial_end == FALSE){
-							//delay_ms(50);
-							//send_TC();
-					}
-			    	
-			    	serial_end = FALSE;
-			    	
-			    	 AS1_SendChar('F');
-			   
-			    	 //serial_end = FALSE;
-			    	 /*while(serial_end!= TRUE){
-			    		 send_TC();
-			    		 delay_ms(10);
-			    	 }
-			    	 */
-			    	 //estado_camara = TC;
-			    	 //while(serial_end!= TRUE){
-			    		 
-			    	// }
-			    	 
-					 // Cambiar el estado a recibir TC
-			    	
-			    	//while(serial_end == 0){}
-			    	//delay_ms(100);
-			    	//serial_end = 0; // Bajar bandera
-			    	//estado_camara = DCARE;
-			    	
-			    	//AS2_SendChar(13);
-			    	
-			    	
-			    	
-			    	/*
-			    	AS1_SendChar(mx);
-			    	
-			    	if (mx > cx +tx)  // Mover rueda derecha, ir  a la izquierda
-			    	{
-			    		Dir2 = 1;
-			    		PWM_rd = 30000;
-			    		Dir1= 1;
-			    		PWM_ri = 0;
-			    		estado= MOTORES;
-			    		
-			    	}
-			    	else if ( (mx <cx -tx) & mx >0){
-			    		Dir2 = 1;
-			    		PWM_rd = 0;
-			    		Dir1= 1;
-			    		PWM_ri = 30000;
-			    		estado= MOTORES;
-			    	}
-			    	else {
-			    		Dir2 = 1;
-						PWM_rd = 0;
-						Dir1= 1;
-						PWM_ri = 0;
-			    		estado = MOTORES;
-			    		// Objeto no centrados
-			    	}*/
-			    	clean_data();
-					//found_band2= 0;
-					 
-			    	
-			    	estado = ESPERAR;
 					break;
 			    case INFRARROJO:
-
+			    	
+					distancia = poly(measure());
+						
+					errorDist = distancia - 15;
+					control_infra();
+		
+					if (estado == INFRARROJO){
+								    		estado = MOTORES ;}
 			    	break;
 				
 				default:
@@ -317,6 +251,105 @@ void main(void){
 
 /* END main */
 
+void control_infra(){
+	 if (errorDist <0.0){
+		errorDist = -errorDist; // Positivo
+		dir1 = 0; // Hacia atras
+		dir2 = 0;
+		PWM_rd= roundf(k_rd_infra*errorDist);
+		PWM_ri= roundf(k_ri_infra*errorDist);
+		if (errorDist < dt){
+			PWM_rd=0;
+			PWM_ri=0;
+		}
+	}	
+	else{
+		dir1 = 1; // Hacia adelante
+		dir2 = 1;
+		PWM_rd= roundf(k_rd_infra*errorDist);
+		PWM_ri= roundf(k_ri_infra*errorDist);
+		if (errorDist < dt){
+					PWM_rd=0;
+					PWM_ri=0;
+				}
+		
+	}
+				    if(PWM_rd > 65000)
+				    	PWM_rd = 65000;
+				    if(PWM_ri > 65000)
+				    	PWM_ri = 65000;
+				    if(PWM_ri <20000)
+						PWM_ri = 0;
+				    if(PWM_rd <20000)
+				    	PWM_rd = 0;
+				
+}
+
+void control_cam(){
+	error_pixel = cx-mx;
+	
+	if (error_pixel == cx) // mx = 0
+	{	
+		
+		if (lasterror_pixel > 0){
+			dir2 = 1;
+			PWM_rd = 0;
+			dir1= 1;
+			PWM_ri = 22000;	
+		}
+		else{
+			dir2 = 0;
+			PWM_rd = 25000;
+			dir1= 1;
+			PWM_ri= 0;
+			
+		}
+		lasterror_pixel = error_pixel;
+		
+	}
+	else if (error_pixel > 0  )  // Mover rueda derecha, ir  a la izquierda
+		{
+			lasterror_pixel = error_pixel;
+			dir2 = 1;
+			PWM_rd = 0;
+			dir1= 1;
+			PWM_ri = (unsigned short) roundf(k_ri*error_pixel) +10000;
+			if (error_pixel < tx) {
+				AS1_SendChar(120);
+				PWM_ri = 0;
+				
+				estado = INFRARROJO;
+			}
+			
+		}
+	else if ( error_pixel < 0){
+			lasterror_pixel = error_pixel;
+			error_pixel = -error_pixel;
+			
+			dir2 = 0;
+			PWM_rd = (unsigned short) roundf(k_rd*error_pixel) +10000;
+			dir1= 1;
+			PWM_ri= 0;
+			if (error_pixel < tx ){ 
+				AS1_SendChar(150);
+				PWM_rd = 0;
+				estado = INFRARROJO;
+			}// Threshold
+			
+		}
+	
+	// Limitar rango pwm
+	if(PWM_rd > 65000)
+		PWM_rd = 65000;
+	if(PWM_ri > 65000)
+		PWM_ri = 65000;
+	if(PWM_ri <20000)
+		PWM_ri = 0;
+	if(PWM_rd <20000)
+		PWM_rd = 0;
+	
+	
+}
 void force_idle(){
 	serial_end = 'N';
 	AS2_SendChar(13);
@@ -326,6 +359,13 @@ void force_idle(){
 			AS2_SendChar(13);
 			//send_TC();
 		}
+}
+void send_TW(){
+	Trama_Camara[0]= 'T';
+	Trama_Camara[1]= 'W';
+	Trama_Camara[2]=  13;
+	Enviados = 3 ;
+	CodError = AS2_SendBlock(Trama_Camara, Enviados,&Enviados);
 }
 void send_TC(){
 	
@@ -351,12 +391,7 @@ void delay_ms (unsigned int time_delay){
 
 
 
-bool Ack(){
-	Recibidos = 4;
-	
-	//AS2_RecvBlock(ACK_cam, 4, Recibidos);
-	if (ACK_cam[0]== 'A' & ACK_cam[1]== 'C' ){}
-}
+
 void decode(){
   // Reconstruir string
 	int i, j;
@@ -464,14 +499,14 @@ float ADC(){ // Devuelve el voltaje medido
 		
 			ADC16 = (ADC16>>4) ;  //  5 bit mas significativo 
 			CodError = AD1_Disable();
-			voltage = (float)3.1/(pow(2,12)-1)*ADC16;
+			voltage = (float)(3.1/(pow(2,12)-1)*ADC16);
 			
 			return voltage; 
 }
 
 float poly(float voltage){
 	float poly_a = 0;
-	poly_a = 152.7-422.1*voltage+491.5*pow(voltage, 2)-258.6*pow(voltage, 3)+50.47*pow(voltage, 4);
+	poly_a = (float)(152.7-422.1*voltage+491.5*pow(voltage, 2)-258.6*pow(voltage, 3)+50.47*pow(voltage, 4));
 	/*poly_a = (float)(
 			-5.0018e+04*(pow(voltage,12))+
 			6.009e+05*pow(voltage,11)-
