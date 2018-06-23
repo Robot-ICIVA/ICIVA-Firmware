@@ -29,11 +29,13 @@
 
 #include "Cpu.h"
 #include "Events.h"
-unsigned char c1;
-unsigned char c2;
-unsigned char estado_temp ; 
-unsigned char packet_size;
 
+
+unsigned char c1, c2;
+unsigned char estado_temp ; 
+unsigned char  wait_r = 0;
+unsigned char counter = 0;
+unsigned char click = 0;
 /* User includes (#include below this line is not maintained by Processor Expert) */
 
 /*
@@ -179,65 +181,61 @@ void  AS1_OnError(void)
 ** ===================================================================
 */
 void  AS1_OnRxChar(void){
-	Bit3_NegVal();
-	if(found_band == 0){
-		
-
-		CodError = AS1_RecvChar( & anuncio ) ; // Header 0xff
-		if (anuncio == 255 ) {
-				Bit4_NegVal();
-				found_band = 1;		 
-			}
-	}
-	else if (found_band == 1){
-		 CodError =  AS1_RecvChar( &n_bytes) ; // Header numero de bytes de data
-		 found_band = found_band+1;
-	}
-	else if (found_band == 2){
-				CodError =  AS1_RecvChar( & command ) ;
-		if (command == 1){
-			 found_band = found_band+1 ; // es un commando y se lee el siguiente byte
-			 n_bytes = n_bytes-1; // bytes restantes por leer
-			 estado_temp = MOTORES;
-		}
-		else if (command == 2){
-			 found_band = found_band+1 ; 
-			 estado_temp = CAMARA;
-			 n_bytes = n_bytes-1; // bytes restantes por leer
-		}
-		else if (command == 3){
-					 estado = INFRARROJO;
-					 found_band = 0; // Se termino la lectura del Bloque, se reincia la lectura
-					 command = 0;
-					 anuncio = 0;
-					 estado_temp = 0; // se reinicia
-		}
-		else if (command == 4){
-			
-						 estado = RESET;
-						 found_band = 0; // Se termino la lectura del Bloque, se reincia la lectura
-						 command = 0;
-						 anuncio = 0;
-						 estado_temp = 0; // se reinicia
-			}
-		else{
-			found_band = 0; // No es un commando, se reinicia el proceso de lectura
-			command = 0;
-			anuncio = 0;
-		}
-	}
-	else { // El estado del sistema se actualiza cuando se termina de leer el bloque
-			 if (found_band == (n_bytes+2)){ // Se lee hasta que se alcance el numero de bytes de trama (+ los dos de headers)
-				 found_band = 0; // Se termino la lectura del Bloque, se reincia la lectura
-				 command = 0;
-				 anuncio = 0;
-				 estado = estado_temp; // Se actualiza el estado del sistema
-				 estado_temp = 0; // se reinicia
-			 }
-			 else {found_band = found_band+1;} // se lee el siguiente byte
+	Bit7_NegVal();// PTC2
+	CodError = AS1_RecvChar( &c1) ;
+	// //Se debe leer el byte  o no sale de la interrupcion
+	/*
+	switch (estado_camara){
 	
-	
-	}
+				case TC:
+					
+					if (serial_end == 'N'){
+						if (c1  == 'M' ) { // Paquete tipo M
+							// // PTE6
+						
+							packet_size = 1;
+							counter = 0;
+							wait_r = 1;
+							Buffer[counter]= c1;
+						}
+						
+						else if(wait_r == 1){
+							if (c1 == 13){
+								Bit4_NegVal(); // PTE6
+								serial_end = 'M';
+								wait_r = 0;
+							}
+						
+						 else {
+								 counter ++;
+								 Buffer[counter]= c1;
+								 packet_size = packet_size+1;} // se lee el siguiente byte
+							
+						}
+					}
+				  break;
+				case ACK:
+					//AS1_SendChar(c1);
+					
+						if (c1  == 'A' ) { // Paquete tipo M
+							Bit4_NegVal(); // PTE6
+							
+							serial_end = 'A';
+							//serial_end = 1;
+						}
+						if (c1  == 'N' ) { // Paquete tipo M
+							Bit5_NegVal(); // PTE6
+							serial_end = 'N';
+							//serial_end = 1;
+						}
+						
+					break;
+					
+					case DCARE:
+						break;
+						
+		}
+	*/
 }
 
 /*
@@ -329,12 +327,69 @@ void  AS2_OnError(void)
 */
 void  AS2_OnRxChar(void)
 {
-	Bit3_NegVal();
+	Bit5_NegVal();// PTC2
+	CodError = AS2_RecvChar( &c1) ;
+	// //Se debe leer el byte  o no sale de la interrupcion
+	switch (estado_camara){
 	
-	CodError = AS2_RecvChar(&c1);
-	AS1_SendChar(c1);
-}
+				case TC:
+					
+					if (serial_end == 'N'){
+						if (c1  == 'M' ) { // Paquete tipo M
+							// // PTE6
+						
+							packet_size = 1;
+							counter = 0;
+							wait_r = 1;
+							Buffer[counter]= c1;
+						}
+						
+						else if(wait_r == 1){
+							if (c1 == 13){
+								Bit4_NegVal(); // PTE6
+								serial_end = 'M';
+								wait_r = 0;
+							}
+						
+						 else {
+								 counter ++;
+								 Buffer[counter]= c1;
+								 packet_size = packet_size+1;} // se lee el siguiente byte
+							
+						}
+					}
+				  break;
+				case ACK:
+					//AS1_SendChar(c1);
+					
+						if (c1  == 'A' ) { // Paquete tipo M
+							//Bit4_NegVal(); // PTE6
+							
+							wait_r = 1;
+							//serial_end = 1;
+						}
+						if (c1  == 'N' ) { // Paquete tipo M
+							//Bit5_NegVal(); // PTE6
+							serial_end = 'N';
+							//serial_end = 1;
+						}
+						if(wait_r == 1){
+							if (c1 == 13){
+								serial_end = 'A';
+								wait_r = 0;
+							}
+							
+						}
+					
+					
+				break;
+				
+				case DCARE:
+					break;
+	}
+	
 
+}
 /*
 ** ===================================================================
 **     Event       :  AS2_OnTxChar (module Events)
@@ -404,6 +459,50 @@ void TI1_OnInterrupt(void)
 {
   estado = MOTORES_APAGAR;
 
+}
+
+/*
+** ===================================================================
+**     Event       :  EInt1_OnInterrupt (module Events)
+**
+**     Component   :  EInt1 [ExtInt]
+**     Description :
+**         This event is called when an active signal edge/level has
+**         occurred.
+**     Parameters  : None
+**     Returns     : Nothing
+** ===================================================================
+*/
+void EInt1_OnInterrupt(void)
+{
+  /* place your EInt1 interrupt procedure body here*/
+	unsigned short time;
+	
+	CodError = FC162_Reset(); // Resetear contador
+	CodError = FC162_GetTimeMS(&time);
+	while(35> time){
+		CodError = FC162_GetTimeMS(&time);
+	}
+	
+	if (click == 0){
+		if (!EInt1_GetVal()){
+				Bit6_NegVal();
+				send_TW();
+				estado = CAMARA;
+				click++;
+			}
+	}
+	else{
+		if (!EInt1_GetVal()){
+						Bit6_NegVal();
+						estado = RESET;
+						click= 0;
+					}
+		
+	}
+	
+	
+	
 }
 
 /* END Events */

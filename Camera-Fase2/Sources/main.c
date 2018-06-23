@@ -86,9 +86,13 @@ void main(void){
   /*** End of Processor Expert internal initialization.                    ***/
   TI1_Disable();
   /* Write your code here */
+  
+  estado = ESPERAR;
+  found_band = 0;
 	 for(;;) {
 		 switch (estado){
 		 	 	case RESET:
+		 	 		
 					Send_ACK(); // Enviar ack de comando
 					Motores(1, 0, 1, 0); //Apagar motores
 					estado = ESPERAR;

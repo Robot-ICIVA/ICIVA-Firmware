@@ -1,5 +1,5 @@
 /* ###################################################################
-**     Filename    : Events.c
+**     Filename    : Events.h
 **     Project     : pruebas pwm
 **     Processor   : MCF51QE128CLK
 **     Component   : Events
@@ -15,7 +15,7 @@
 **
 ** ###################################################################*/
 /*!
-** @file Events.c
+** @file Events.h
 ** @version 01.02
 ** @brief
 **         This is user's event module.
@@ -25,17 +25,72 @@
 **  @addtogroup Events_module Events module documentation
 **  @{
 */         
+
+#ifndef __Events_H
+#define __Events_H
 /* MODULE Events */
 
-#include "Cpu.h"
-#include "Events.h"
-unsigned char c1;
-unsigned char c2;
-unsigned char estado_temp ; 
-unsigned char packet_size;
+#include "PE_Types.h"
+#include "PE_Error.h"
+#include "PE_Const.h"
+#include "IO_Map.h"
+#include "PE_Timer.h"
+#include "PWM1.h"
+#include "PWM2.h"
+#include "Bit1.h"
+#include "Bit2.h"
+#include "AD1.h"
+#include "FC161.h"
+#include "AS1.h"
+#include "Bit3.h"
+#include "Bit4.h"
+#include "Bit5.h"
+#include "AS2.h"
+#include "TI1.h"
+#include "EInt1.h"
+#include "Bit6.h"
+#include "FC162.h"
+#include "Bit7.h"
+#include "PWM1.h"
 
-/* User includes (#include below this line is not maintained by Processor Expert) */
+#define ESPERAR  2
+#define MOTORES  3
+#define MOTORES_APAGAR  4
+#define CAMARA 5
+#define INFRARROJO 6
+#define FREERUN 7
+#define POINTCLOUD_START 8
+#define POINTCLOUD_END 9
+#define RESET 10
+#define BLUETOOTH 11
 
+#define ACK 11
+#define TC 10
+#define DCARE  12
+#define GM  13
+// Variables Maquina de estados
+//const unsigned char MOTORES;
+// Variables Maquina de estados
+//const unsigned char ESPERAR;
+extern unsigned char estado;
+
+// Variables COMM
+extern unsigned char CodError;
+extern unsigned int error;
+extern bool primero;
+// Banderas
+extern  bool serial_start;
+extern  unsigned char serial_end;
+
+
+extern unsigned char command; // Comando enviado desde pc para cambiar estado del sistema
+extern unsigned char estado_camara;
+extern unsigned char packet_size;
+extern unsigned char Buffer[100];
+extern void delay_ms (unsigned int time_delay);
+extern void send_TW ();
+
+void AD1_OnEnd(void);
 /*
 ** ===================================================================
 **     Event       :  AD1_OnEnd (module Events)
@@ -50,12 +105,8 @@ unsigned char packet_size;
 **     Returns     : Nothing
 ** ===================================================================
 */
-void AD1_OnEnd(void)
-{
-  /* Write your code here ... */
-}
 
-
+void PWM1_OnError(void);
 /*
 ** ===================================================================
 **     Event       :  PWM1_OnError (module Events)
@@ -71,11 +122,8 @@ void AD1_OnEnd(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  PWM1_OnError(void)
-{
-  /* Write your code here ... */
-}
 
+void PWM1_OnRxChar(void);
 /*
 ** ===================================================================
 **     Event       :  PWM1_OnRxChar (module Events)
@@ -92,7 +140,7 @@ void  PWM1_OnError(void)
 ** ===================================================================
 */
 
-
+void PWM1_OnTxChar(void);
 /*
 ** ===================================================================
 **     Event       :  PWM1_OnTxChar (module Events)
@@ -104,10 +152,8 @@ void  PWM1_OnError(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  PWM1_OnTxChar(void){
-  /* Write your code here ... */
-}
 
+void PWM1_OnFullRxBuf(void);
 /*
 ** ===================================================================
 **     Event       :  PWM1_OnFullRxBuf (module Events)
@@ -121,11 +167,8 @@ void  PWM1_OnTxChar(void){
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  PWM1_OnFullRxBuf(void)
-{
-  /* Write your code here ... */
-}
 
+void PWM1_OnFreeTxBuf(void);
 /*
 ** ===================================================================
 **     Event       :  PWM1_OnFreeTxBuf (module Events)
@@ -138,11 +181,8 @@ void  PWM1_OnFullRxBuf(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  PWM1_OnFreeTxBuf(void)
-{
-  /* Write your code here ... */
-}
 
+void AS1_OnError(void);
 /*
 ** ===================================================================
 **     Event       :  AS1_OnError (module Events)
@@ -158,11 +198,8 @@ void  PWM1_OnFreeTxBuf(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  AS1_OnError(void)
-{
-  /* Write your code here ... */
-}
 
+void AS1_OnRxChar(void);
 /*
 ** ===================================================================
 **     Event       :  AS1_OnRxChar (module Events)
@@ -178,68 +215,8 @@ void  AS1_OnError(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  AS1_OnRxChar(void){
-	Bit3_NegVal();
-	if(found_band == 0){
-		
 
-		CodError = AS1_RecvChar( & anuncio ) ; // Header 0xff
-		if (anuncio == 255 ) {
-				Bit4_NegVal();
-				found_band = 1;		 
-			}
-	}
-	else if (found_band == 1){
-		 CodError =  AS1_RecvChar( &n_bytes) ; // Header numero de bytes de data
-		 found_band = found_band+1;
-	}
-	else if (found_band == 2){
-				CodError =  AS1_RecvChar( & command ) ;
-		if (command == 1){
-			 found_band = found_band+1 ; // es un commando y se lee el siguiente byte
-			 n_bytes = n_bytes-1; // bytes restantes por leer
-			 estado_temp = MOTORES;
-		}
-		else if (command == 2){
-			 found_band = found_band+1 ; 
-			 estado_temp = CAMARA;
-			 n_bytes = n_bytes-1; // bytes restantes por leer
-		}
-		else if (command == 3){
-					 estado = INFRARROJO;
-					 found_band = 0; // Se termino la lectura del Bloque, se reincia la lectura
-					 command = 0;
-					 anuncio = 0;
-					 estado_temp = 0; // se reinicia
-		}
-		else if (command == 4){
-			
-						 estado = RESET;
-						 found_band = 0; // Se termino la lectura del Bloque, se reincia la lectura
-						 command = 0;
-						 anuncio = 0;
-						 estado_temp = 0; // se reinicia
-			}
-		else{
-			found_band = 0; // No es un commando, se reinicia el proceso de lectura
-			command = 0;
-			anuncio = 0;
-		}
-	}
-	else { // El estado del sistema se actualiza cuando se termina de leer el bloque
-			 if (found_band == (n_bytes+2)){ // Se lee hasta que se alcance el numero de bytes de trama (+ los dos de headers)
-				 found_band = 0; // Se termino la lectura del Bloque, se reincia la lectura
-				 command = 0;
-				 anuncio = 0;
-				 estado = estado_temp; // Se actualiza el estado del sistema
-				 estado_temp = 0; // se reinicia
-			 }
-			 else {found_band = found_band+1;} // se lee el siguiente byte
-	
-	
-	}
-}
-
+void AS1_OnTxChar(void);
 /*
 ** ===================================================================
 **     Event       :  AS1_OnTxChar (module Events)
@@ -251,11 +228,8 @@ void  AS1_OnRxChar(void){
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  AS1_OnTxChar(void)
-{
-  /* Write your code here ... */
-}
 
+void AS1_OnFullRxBuf(void);
 /*
 ** ===================================================================
 **     Event       :  AS1_OnFullRxBuf (module Events)
@@ -269,11 +243,8 @@ void  AS1_OnTxChar(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  AS1_OnFullRxBuf(void)
-{
-  /* Write your code here ... */
-}
 
+void AS1_OnFreeTxBuf(void);
 /*
 ** ===================================================================
 **     Event       :  AS1_OnFreeTxBuf (module Events)
@@ -286,11 +257,8 @@ void  AS1_OnFullRxBuf(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  AS1_OnFreeTxBuf(void)
-{
-  /* Write your code here ... */
-}
 
+void AS2_OnError(void);
 /*
 ** ===================================================================
 **     Event       :  AS2_OnError (module Events)
@@ -306,12 +274,8 @@ void  AS1_OnFreeTxBuf(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  AS2_OnError(void)
-{
-	  /* Write your code here ... */
-	
-}
 
+void AS2_OnRxChar(void);
 /*
 ** ===================================================================
 **     Event       :  AS2_OnRxChar (module Events)
@@ -327,14 +291,8 @@ void  AS2_OnError(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  AS2_OnRxChar(void)
-{
-	Bit3_NegVal();
-	
-	CodError = AS2_RecvChar(&c1);
-	AS1_SendChar(c1);
-}
 
+void AS2_OnTxChar(void);
 /*
 ** ===================================================================
 **     Event       :  AS2_OnTxChar (module Events)
@@ -346,11 +304,8 @@ void  AS2_OnRxChar(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  AS2_OnTxChar(void)
-{
-  /* Write your code here ... */
-}
 
+void AS2_OnFullRxBuf(void);
 /*
 ** ===================================================================
 **     Event       :  AS2_OnFullRxBuf (module Events)
@@ -364,11 +319,8 @@ void  AS2_OnTxChar(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  AS2_OnFullRxBuf(void)
-{
-  /* Write your code here ... */
-}
 
+void AS2_OnFreeTxBuf(void);
 /*
 ** ===================================================================
 **     Event       :  AS2_OnFreeTxBuf (module Events)
@@ -381,11 +333,8 @@ void  AS2_OnFullRxBuf(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void  AS2_OnFreeTxBuf(void)
-{
-  /* Write your code here ... */
-}
 
+void TI1_OnInterrupt(void);
 /*
 ** ===================================================================
 **     Event       :  TI1_OnInterrupt (module Events)
@@ -400,13 +349,23 @@ void  AS2_OnFreeTxBuf(void)
 **     Returns     : Nothing
 ** ===================================================================
 */
-void TI1_OnInterrupt(void)
-{
-  estado = MOTORES_APAGAR;
 
-}
+void EInt1_OnInterrupt(void);
+/*
+** ===================================================================
+**     Event       :  EInt1_OnInterrupt (module Events)
+**
+**     Component   :  EInt1 [ExtInt]
+**     Description :
+**         This event is called when an active signal edge/level has
+**         occurred.
+**     Parameters  : None
+**     Returns     : Nothing
+** ===================================================================
+*/
 
 /* END Events */
+#endif /* __Events_H*/
 
 /*!
 ** @}
