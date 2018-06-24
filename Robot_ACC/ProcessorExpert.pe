@@ -1,14 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <PEproject>
   <Header>
     <Name>Robot_ACC</Name>
     <SavedBy>luisi</SavedBy>
     <ModificationStamp>40</ModificationStamp>
-<<<<<<< HEAD
     <Date>2018-05-28</Date>
-=======
-    <Date>2018-06-03</Date>
->>>>>>> f2ab1c8250e6ec156f74ff0019bea82f1d88fe99
     <IDE>Eclipse IDE</IDE>
     <PEversion>1.9.0.RT6_b1411-0406</PEversion>
   </Header>

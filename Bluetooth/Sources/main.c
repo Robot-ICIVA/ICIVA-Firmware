@@ -190,9 +190,17 @@ void main(void){
 					break;
 				
 				case BLUETOOTH:
+<<<<<<< HEAD
 					
 					delay_ms(500);
 					AS1_SendChar('k');
+=======
+					Bit3_NegVal();
+					delay_ms(100);
+					AS1_SendChar('k');
+					//AS1_SendChar(13);
+					
+>>>>>>> refs/remotes/origin/master
 					break;
 				case MOTORES:
 					
@@ -380,19 +388,29 @@ void force_idle(){
 
 
 void force_ret(){
+<<<<<<< HEAD
+=======
+	/*
+>>>>>>> refs/remotes/origin/master
 	serial_end = 'N';
 	Enviados = 4;
 	CodError = AS1_SendBlock(Trama_ret, Enviados,&Enviados);
 	
 	delay_ms(100); // Esperar respuesta
+<<<<<<< HEAD
 	if(serial_end == 'N'){ // Si no se recibe respuesta, cambiar a modo comando
 		delay_ms(1100);
 		Bit7_NegVal();
+=======
+	if(1){ // Si no se recibe respuesta, cambiar a modo comando
+		delay_ms(1100);
+>>>>>>> refs/remotes/origin/master
 		Enviados = 3;
 		CodError = AS1_SendBlock(Trama_plus, Enviados,&Enviados);
 		delay_ms(1100);
 	}
 	
+<<<<<<< HEAD
 	serial_end = 'N';
 	while(serial_end == 'N'){
 			Bit6_NegVal();
@@ -402,18 +420,37 @@ void force_ret(){
 			delay_ms(1100);
 			//send_TC();
 		}
+=======
+>>>>>>> refs/remotes/origin/master
 	
 	serial_end = 'N'; // reitentar mandar comando ret
 	Enviados = 4;
 	CodError = AS1_SendBlock(Trama_ret, Enviados,&Enviados);
 	
 	while(serial_end == 'N'){
+<<<<<<< HEAD
+=======
+				Bit7_NegVal();
+>>>>>>> refs/remotes/origin/master
 				delay_ms(100);
 				Enviados = 4;
 				CodError = AS1_SendBlock(Trama_ret, Enviados,&Enviados);
 				//send_TC();
 			}
+<<<<<<< HEAD
 	
+=======
+	*/
+	AS1_SendChar(13);
+	delay_ms(100);
+	AS1_SendChar('r');
+	delay_ms(100);
+	AS1_SendChar('e');
+	delay_ms(100);
+	AS1_SendChar('t');
+	delay_ms(100);
+	AS1_SendChar(13);
+>>>>>>> refs/remotes/origin/master
 }
 void send_TW(){
 	Trama_Camara[0]= 'T';

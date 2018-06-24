@@ -179,10 +179,13 @@ void  AS1_OnError(void)
 ** ===================================================================
 */
 void  AS1_OnRxChar(void){
-	Bit4_NegVal();
+	Bit3_NegVal();
 	if(found_band == 0){
+		
+
 		CodError = AS1_RecvChar( & anuncio ) ; // Header 0xff
-			if (anuncio  == 0xff ) {
+		if (anuncio == 255 ) {
+				Bit4_NegVal();
 				found_band = 1;		 
 			}
 	}
@@ -191,9 +194,8 @@ void  AS1_OnRxChar(void){
 		 found_band = found_band+1;
 	}
 	else if (found_band == 2){
-		CodError =  AS1_RecvChar( & command ) ;
+				CodError =  AS1_RecvChar( & command ) ;
 		if (command == 1){
-			Bit4_NegVal();
 			 found_band = found_band+1 ; // es un commando y se lee el siguiente byte
 			 n_bytes = n_bytes-1; // bytes restantes por leer
 			 estado_temp = MOTORES;
@@ -211,6 +213,7 @@ void  AS1_OnRxChar(void){
 					 estado_temp = 0; // se reinicia
 		}
 		else if (command == 4){
+			
 						 estado = RESET;
 						 found_band = 0; // Se termino la lectura del Bloque, se reincia la lectura
 						 command = 0;
