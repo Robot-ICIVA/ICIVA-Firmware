@@ -71,7 +71,12 @@ unsigned short Lectura_Buffer=4;
 unsigned char Buffer[40];
 unsigned char Trama_PC[4]={0xff, 0x02, 0x00, 0x00}; // Esta es una primera trama, sinc+packet_size+data
 unsigned char Trama_ACK[2]={0xff, 0x00};
+unsigned short Enviados;
+// Variables COMM BLUETOOTH
+unsigned char Trama_plus [3]={'+', '+', '+'};
+unsigned char Trama_ret [4]={'r', 'e', 't', 13};
 
+void force_ret();
 void delay_ms (unsigned int time_delay);
 void Motor( unsigned short Motor, unsigned short Direccion, unsigned short Velocidad);
 void Motores( unsigned short Dir1, unsigned short Vel1, unsigned short Dir2, unsigned short Vel2);
@@ -167,6 +172,17 @@ void main(void){
 } /*** End of main routine. DO NOT MODIFY THIS TEXT!!! ***/
 
 
+
+void force_ret(){
+	delay_ms(1100);
+	Enviados = 3;
+	CodError = AS1_SendBlock(Trama_plus, Enviados,&Enviados);
+	delay_ms(1500);
+	//mandar comando ret
+	Enviados = 4;
+	CodError = AS1_SendBlock(Trama_ret, Enviados,&Enviados);
+	
+}
 void Motor( unsigned short Motor, unsigned short Direccion, unsigned short Velocidad){
 	if (Motor == 1) {
 		if(Direccion==1){								//Direccion 1 esta asociada a forward
@@ -197,7 +213,7 @@ void Motor( unsigned short Motor, unsigned short Direccion, unsigned short Veloc
 
 void Motores( unsigned short Dir1, unsigned short Vel1, unsigned short Dir2, unsigned short Vel2){
 	Motor(1, Dir1, Vel1); // Motor1
-	Motor(2, Dir2, Vel2); // Motor2
+	Motor(2, Dir2, Vel2); // Motor2, rueda derecha
 }
 /* END main */
 void delay_ms (unsigned int time_delay){

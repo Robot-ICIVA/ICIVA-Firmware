@@ -29,9 +29,13 @@
 
 #include "Cpu.h"
 #include "Events.h"
-unsigned char c1;
-unsigned char c2;
 
+
+unsigned char c1, c2;
+unsigned char estado_temp ; 
+unsigned char  wait_r = 0;
+unsigned char counter = 0;
+unsigned char click = 0;
 /* User includes (#include below this line is not maintained by Processor Expert) */
 
 /*
@@ -177,62 +181,58 @@ void  AS1_OnError(void)
 ** ===================================================================
 */
 void  AS1_OnRxChar(void){
-	Bit4_NegVal();
-	if(found_band==0){
-		CodError = AS1_RecvChar( & anuncio ) ;
-			if (( anuncio & 0xf0) == 0xf0 ) {
-				found_band = 1;		 
-			}
-	}
-	else if (found_band == 1){
-			 CodError =  AS1_RecvChar( & anuncio2 ) ;
-			 if (anuncio2 == 0){
-				 found_band = found_band+1 ; // es un commando y se lee el siguiente byte
-			 }
-			 else{
-				 found_band = 0 ; // No es un commando
-			 }
-				
-	}
-	else if (found_band == 2){
-		CodError =  AS1_RecvChar( & command ) ;
-		if (command == 1){
-			 n_bytes = anuncio & 0x0f ; // Numero de canales a leer
-			 found_band = found_band+1 ; // es un commando y se lee el siguiente byte
-			 estado = MOTORES;
-		}
-		else if (command == 2){
-			 n_bytes = anuncio & 0x0f ; // Numero de canales a leer
-			 found_band = found_band+1 ; // es un commando y se lee el siguiente byte
-			 estado = CAMARA;
-			
-		}
-		else if (command == 3){
-					 n_bytes = anuncio & 0x0f ; // Numero de canales a leer
-					 found_band = found_band+1 ; // es un commando y se lee el siguiente byte
-					 estado = INFRARROJO;
+	Bit5_NegVal();// PTC2
+	CodError = AS1_RecvChar( &c1) ;
+	// //Se debe leer el byte  o no sale de la interrupcion
+	switch (estado_camara){
+	
+				case TC:
 					
-				}
-		else{
-			found_band = 0; // No es un commando
-			command = 0;
-			anuncio = 0;
-			anuncio2 = 0;
+					if (serial_end == 'N'){
+						if (c1  == 'M' ) { // Paquete tipo M
+							// // PTE6
+						
+							packet_size = 1;
+							counter = 0;
+							wait_r = 1;
+							Buffer[counter]= c1;
+						}
+						
+						else if(wait_r == 1){
+							if (c1 == 13){
+								Bit4_NegVal(); // PTE6
+								serial_end = 'M';
+								wait_r = 0;
+							}
+						
+						 else {
+								 counter ++;
+								 Buffer[counter]= c1;
+								 packet_size = packet_size+1;} // se lee el siguiente byte
+							
+						}
+					}
+				  break;
+				case ACK:
+					//AS1_SendChar(c1);
+					
+						if (c1  == 'A' ) { // Paquete tipo M
+							Bit4_NegVal(); // PTE6
+							
+							serial_end = 'A';
+							//serial_end = 1;
+						}
+						if (c1  == 'N' ) { // Paquete tipo M
+							Bit5_NegVal(); // PTE6
+							serial_end = 'N';
+							//serial_end = 1;
+						}
+						
+					break;
+					
+					case DCARE:
+						break;
 		}
-	}
-	else {
-			 if (found_band == (n_bytes+2)){ // Se lee hasta que se alcance el numero de bytes de trama
-				 found_band = 0; // Se termino la lectura del Bloque
-				 command = 0;
-				 anuncio = 0;
-				 anuncio2 = 0;
-
-				 
-			 }
-			 else {found_band = found_band+1;} // se lee el siguiente byte
-	
-	
-	}
 }
 
 /*
@@ -324,11 +324,69 @@ void  AS2_OnError(void)
 */
 void  AS2_OnRxChar(void)
 {
-	Bit3_NegVal();
-	CodError = AS2_RecvChar(&c1);
-	AS1_SendChar(c1);
-}
+	Bit5_NegVal();// PTC2
+	CodError = AS2_RecvChar( &c1) ;
+	// //Se debe leer el byte  o no sale de la interrupcion
+	switch (estado_camara){
+	
+				case TC:
+					
+					if (serial_end == 'N'){
+						if (c1  == 'M' ) { // Paquete tipo M
+							// // PTE6
+						
+							packet_size = 1;
+							counter = 0;
+							wait_r = 1;
+							Buffer[counter]= c1;
+						}
+						
+						else if(wait_r == 1){
+							if (c1 == 13){
+								Bit4_NegVal(); // PTE6
+								serial_end = 'M';
+								wait_r = 0;
+							}
+						
+						 else {
+								 counter ++;
+								 Buffer[counter]= c1;
+								 packet_size = packet_size+1;} // se lee el siguiente byte
+							
+						}
+					}
+				  break;
+				case ACK:
+					//AS1_SendChar(c1);
+					
+						if (c1  == 'A' ) { // Paquete tipo M
+							//Bit4_NegVal(); // PTE6
+							
+							wait_r = 1;
+							//serial_end = 1;
+						}
+						if (c1  == 'N' ) { // Paquete tipo M
+							//Bit5_NegVal(); // PTE6
+							serial_end = 'N';
+							//serial_end = 1;
+						}
+						if(wait_r == 1){
+							if (c1 == 13){
+								serial_end = 'A';
+								wait_r = 0;
+							}
+							
+						}
+					
+					
+				break;
+				
+				case DCARE:
+					break;
+	}
+	
 
+}
 /*
 ** ===================================================================
 **     Event       :  AS2_OnTxChar (module Events)
@@ -378,6 +436,70 @@ void  AS2_OnFullRxBuf(void)
 void  AS2_OnFreeTxBuf(void)
 {
   /* Write your code here ... */
+}
+
+/*
+** ===================================================================
+**     Event       :  TI1_OnInterrupt (module Events)
+**
+**     Component   :  TI1 [TimerInt]
+**     Description :
+**         When a timer interrupt occurs this event is called (only
+**         when the component is enabled - <Enable> and the events are
+**         enabled - <EnableEvent>). This event is enabled only if a
+**         <interrupt service/event> is enabled.
+**     Parameters  : None
+**     Returns     : Nothing
+** ===================================================================
+*/
+void TI1_OnInterrupt(void)
+{
+  estado = MOTORES_APAGAR;
+
+}
+
+/*
+** ===================================================================
+**     Event       :  EInt1_OnInterrupt (module Events)
+**
+**     Component   :  EInt1 [ExtInt]
+**     Description :
+**         This event is called when an active signal edge/level has
+**         occurred.
+**     Parameters  : None
+**     Returns     : Nothing
+** ===================================================================
+*/
+void EInt1_OnInterrupt(void)
+{
+  /* place your EInt1 interrupt procedure body here*/
+	unsigned short time;
+	
+	CodError = FC162_Reset(); // Resetear contador
+	CodError = FC162_GetTimeMS(&time);
+	while(35> time){
+		CodError = FC162_GetTimeMS(&time);
+	}
+	
+	if (click == 0){
+		if (!EInt1_GetVal()){
+				Bit6_NegVal();
+				send_TW();
+				estado = CAMARA;
+				click++;
+			}
+	}
+	else{
+		if (!EInt1_GetVal()){
+						Bit6_NegVal();
+						estado = RESET;
+						click= 0;
+					}
+		
+	}
+	
+	
+	
 }
 
 /* END Events */

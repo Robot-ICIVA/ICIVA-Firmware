@@ -74,8 +74,14 @@ unsigned short Vel;
 unsigned short Motor, Dir;
 unsigned short Lectura_Buffer=4;
 unsigned char Buffer[40];
+unsigned short Enviados;
 
 
+// Variables COMM BLUETOOTH
+unsigned char Trama_plus [3]={'+', '+', '+'};
+unsigned char Trama_ret [4]={'r', 'e', 't', 13};
+
+void force_ret();
 void delay_ms (unsigned int time_delay);
 void Motores( unsigned short Motor, unsigned short Direccion, unsigned short Velocidad);
 
@@ -88,6 +94,7 @@ void main(void){
   /*** End of Processor Expert internal initialization.                    ***/
 
   /* Write your code here */
+  force_ret();
 	 for(;;) {
 		 switch (estado){
 				
@@ -167,6 +174,17 @@ void Motores( unsigned short Motor, unsigned short Direccion, unsigned short Vel
 }
 
 /* END main */
+
+void force_ret(){
+	delay_ms(1100);
+	Enviados = 3;
+	CodError = AS1_SendBlock(Trama_plus, Enviados,&Enviados);
+	delay_ms(1500);
+	//mandar comando ret
+	Enviados = 4;
+	CodError = AS1_SendBlock(Trama_ret, Enviados,&Enviados);
+	
+}
 void delay_ms (unsigned int time_delay){
 	
 	unsigned short time;
